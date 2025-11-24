@@ -51,6 +51,14 @@ body {
   height: 100vh;
   padding: 20px;
   background: radial-gradient(circle at top right, #1e1e24, var(--bg-primary));
+  position: relative;
+}
+
+.login-container .connection-status {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
 }
 
 .login-box {
