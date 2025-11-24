@@ -1,10 +1,12 @@
-# pdv-offline
+# PDV Offline - Point of Sale System
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Electron](https://img.shields.io/badge/electron-33.2-47848f.svg)
+![React](https://img.shields.io/badge/react-18.3-61dafb.svg)
+![TypeScript](https://img.shields.io/badge/typescript-5.6-blue.svg)
 ![License](https://img.shields.io/badge/license-ISC-green.svg)
-![Deploy Status](https://img.shields.io/badge/deploy-production-success.svg)
 
-Sistema PDV Offline com Electron e MySQL - Ponto de Venda completo com sincronização automática, gestão de caixa, vendas e estoque.
+Offline-first Point of Sale system built with Electron, React, and MySQL. Features automatic synchronization, cash management, sales tracking, and real-time inventory control.
 
 ---
 
