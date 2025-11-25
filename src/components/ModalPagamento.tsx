@@ -12,9 +12,11 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
   const [paidAmount, setPaidAmount] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const user = useAuthStore((state) => state.user);
-  const { items, getNetTotal, clear } = useVendaStore();
+  const { items, getNetTotal, getDiscount, getTotal, clear } = useVendaStore();
 
   const total = getNetTotal();
+  const discount = getDiscount();
+  const subtotal = getTotal();
 
   const handlePayment = async () => {
     if (!paymentMethod) {
@@ -34,11 +36,10 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
       const orderNumber = `PDV001-${Date.now()}`;
 
       // Salvar venda
-      // Salvar venda
       const result = await window.electron.db.saveOrder({
         orderNumber,
-        total,
-        discount: 0,
+        total: subtotal, // Save gross total
+        discount: discount, // Save discount
         netTotal: total,
         paymentMethod,
         operatorId: user?.id,
@@ -87,6 +88,8 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
           coo: result.coo || "000000",
           date: new Date().toLocaleString("pt-BR"),
           items: items,
+          subtotal: subtotal,
+          discount: discount,
           total: total,
           paymentMethod: paymentMethod,
           paidAmount: finalPaidAmount,
@@ -181,6 +184,14 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
                 .join("")}
             </table>
             <div class="divider"></div>
+            ${
+              data.sale.discount > 0
+                ? `
+            <div class="text-right">SUBTOTAL R$ ${(data.sale.subtotal / 100).toFixed(2)}</div>
+            <div class="text-right">DESCONTO R$ -${(data.sale.discount / 100).toFixed(2)}</div>
+            `
+                : ""
+            }
             <div class="text-right bold" style="font-size: 14px">TOTAL R$ ${(data.sale.total / 100).toFixed(2)}</div>
             <div class="divider"></div>
             <div class="text-right">${data.sale.paymentMethod} R$ ${data.sale.paidAmount.toFixed(2)}</div>
