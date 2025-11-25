@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { useVendaStore } from '../stores/vendaStore';
-import BuscaProduto from '../components/BuscaProduto';
+import BuscaProduto, { type BuscaProdutoRef } from '../components/BuscaProduto';
 import Carrinho from '../components/Carrinho';
 import ModalPagamento from '../components/ModalPagamento';
 import { ConnectionStatus } from '../components/ConnectionStatus';
@@ -22,6 +22,7 @@ export default function PDV() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showDiscountOptions, setShowDiscountOptions] = useState(false);
   const [showAuthCancel, setShowAuthCancel] = useState(false);
+  const buscaProdutoRef = useRef<BuscaProdutoRef>(null);
 
   const handleFinalizeSale = () => {
     if (items.length === 0) {
@@ -106,11 +107,61 @@ export default function PDV() {
         return;
       }
 
+      // F12 - Finalizar Venda
+      if (e.key === 'F12') {
+        e.preventDefault();
+        handleFinalizeSale();
+      }
+
+      // F9 - Desconto
+      if (e.key === 'F9') {
+        e.preventDefault();
+        handleDiscountRequest();
+      }
+
+      // F7 - Cancelar Cupom
+      if (e.key === 'F7') {
+        e.preventDefault();
+        handleCancelSaleRequest();
+      }
+
+      // F6 - Pesar Produto (placeholder)
+      if (e.key === 'F6') {
+        e.preventDefault();
+        alert('Função "Pesar Produto" ainda não implementada');
+      }
+
+      // F5 - Identificar Cliente (placeholder)
+      if (e.key === 'F5') {
+        e.preventDefault();
+        alert('Função "Identificar Cliente" ainda não implementada');
+      }
+
+      // F2 - Focar no campo de busca
+      if (e.key === 'F2') {
+        e.preventDefault();
+        // Only focus if no modals are open
+        const hasModalOpen = showPayment || showUtils || showAuthDelete || 
+                            showRemoveItem || showAuthDiscount || showDiscountModal || 
+                            showDiscountOptions || showAuthCancel;
+        if (!hasModalOpen) {
+          buscaProdutoRef.current?.focus();
+        }
+      }
+
+      // Delete - Remover Item
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        handleRemoveItemRequest();
+      }
+
+      // R - Menu/Utilidades
       if (e.key.toLowerCase() === 'r') {
         e.preventDefault();
         setShowUtils(true);
       }
       
+      // Escape - Fechar modais
       if (e.key === 'Escape') {
         setShowUtils(false);
         setShowAuthDelete(false);
@@ -120,25 +171,31 @@ export default function PDV() {
         setShowDiscountOptions(false);
         setShowAuthCancel(false);
       }
-
-      if (e.key === 'Delete') {
-        e.preventDefault();
-        handleRemoveItemRequest();
-      }
-
-      if (e.key === 'F9') {
-        e.preventDefault();
-        handleDiscountRequest();
-      }
-
-      if (e.key === 'F7') {
-        e.preventDefault();
-        handleCancelSaleRequest();
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [items]);
+
+  // Catalog Update Notification Logic
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'updating' | 'updated'>('idle');
+
+  useEffect(() => {
+    const handleStart = () => setUpdateStatus('updating');
+    
+    // Listen for completion via the exposed electron API
+    const unsubscribe = window.electron.db.onCatalogUpdated(() => {
+      setUpdateStatus('updated');
+      // Hide after 3 seconds
+      setTimeout(() => setUpdateStatus('idle'), 3000);
+    });
+
+    window.addEventListener('catalog-update-start', handleStart);
+
+    return () => {
+      window.removeEventListener('catalog-update-start', handleStart);
+      unsubscribe();
+    };
   }, []);
 
   const formatCurrency = (value: number) => {
@@ -147,6 +204,38 @@ export default function PDV() {
 
   return (
     <div className="pdv-container">
+      {/* Update Notification */}
+      {updateStatus !== 'idle' && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: updateStatus === 'updating' ? '#3b82f6' : '#22c55e',
+          color: 'white',
+          padding: '10px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontWeight: 'bold',
+          animation: 'slideDown 0.3s ease-out'
+        }}>
+          {updateStatus === 'updating' ? (
+            <>
+              <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+              <span>Recebendo tabelas...</span>
+            </>
+          ) : (
+            <>
+              <span>✓ Tabelas atualizadas!</span>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="pdv-header">
         <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -169,7 +258,7 @@ export default function PDV() {
         {/* Left Panel - Main Area (Search + Cart) */}
         <div className="pdv-left">
           {/* Busca de Produto */}
-          <BuscaProduto />
+          <BuscaProduto ref={buscaProdutoRef} />
           
           {/* Carrinho */}
           <Carrinho />

@@ -94,6 +94,9 @@ function handleServerMessage(data: any) {
 
 async function handleCatalogReceived(catalog: any) {
   try {
+    // Notify UI that update is starting
+    window.dispatchEvent(new CustomEvent('catalog-update-start'));
+
     // Load catalog into localStorage
     await window.electron.db.saveCatalog(catalog);
     

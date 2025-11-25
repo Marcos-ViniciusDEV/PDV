@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useVendaStore } from "../stores/vendaStore";
 import ModalAutorizacao from "./ModalAutorizacao";
 
-export default function BuscaProduto() {
+export interface BuscaProdutoRef {
+  focus: () => void;
+}
+
+const BuscaProduto = forwardRef<BuscaProdutoRef>((_props, ref) => {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<any[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
@@ -10,6 +14,13 @@ export default function BuscaProduto() {
   const [showAuth, setShowAuth] = useState(false);
   const [pendingMultiplier, setPendingMultiplier] = useState(1);
   const addItem = useVendaStore((state) => state.addItem);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRef.current?.focus();
+    }
+  }));
 
   useEffect(() => {
     loadProducts();
@@ -112,6 +123,7 @@ export default function BuscaProduto() {
     <div className="busca-produto">
       <div style={{ position: 'relative' }}>
         <input 
+          ref={inputRef}
           type="text" 
           value={search} 
           onChange={(e) => setSearch(e.target.value)} 
@@ -160,4 +172,8 @@ export default function BuscaProduto() {
       )}
     </div>
   );
-}
+});
+
+BuscaProduto.displayName = 'BuscaProduto';
+
+export default BuscaProduto;

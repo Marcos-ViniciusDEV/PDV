@@ -73,9 +73,12 @@ export function registerIpcHandlers() {
     }
   });
 
-  ipcMain.handle("save-catalog", async (_, data: any) => {
+  ipcMain.handle("save-catalog", async (event, data: any) => {
     try {
-      return await catalogService.loadCatalog(data);
+      const result = await catalogService.loadCatalog(data);
+      // Notify renderer that catalog has been updated
+      event.sender.send('catalog:updated');
+      return result;
     } catch (error: any) {
       console.error("[Controller] save-catalog error:", error);
       throw error;
