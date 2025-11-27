@@ -381,7 +381,8 @@ Para detalhes completos sobre as regras de negócio do sistema, consulte o arqui
 
 ## 📝 Licença
 
-ISC
+ Author: Marcos Vinicius
+ Last Updated: November 2025
 
 ---
 
