@@ -49,6 +49,8 @@ export function registerCaixaHandlers() {
         suppliesTotal: result.totals.suppliesTotal,
         netTotal: result.totals.netTotal,
         paymentMethods: result.totals.paymentMethods,
+        operatorSales: result.totals.operatorSales,
+        detailedMovements: result.totals.detailedMovements,
       });
       
       // await printerService.printReceipt(zReportHtml);
@@ -136,6 +138,37 @@ export function registerCaixaHandlers() {
       return { success: true, totals };
     } catch (error: any) {
       console.error("[Caixa Controller] Error getting totals:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Obter Totais do Dia (Redução Z)
+  ipcMain.handle("caixa:daily-totals", async () => {
+    try {
+      const today = new Date();
+      const totals = await cashService.getDailyTotals(today);
+      
+      const zReportHtml = printerService.generateZReport({
+        pdvId: "PDV-01",
+        operatorName: "TODOS",
+        openedAt: totals.date,
+        closedAt: new Date(),
+        initialAmount: 0, // Não aplicável para visão diária agregada
+        finalAmount: totals.netTotal, // Assumindo que tudo foi conferido
+        salesTotal: totals.salesTotal,
+        salesCount: totals.salesCount,
+        bleedsTotal: totals.bleedsTotal,
+        suppliesTotal: totals.suppliesTotal,
+        netTotal: totals.netTotal,
+        paymentMethods: totals.paymentMethods,
+        operatorSales: totals.operatorSales,
+        detailedMovements: totals.detailedMovements,
+        fiscal: totals.fiscal,
+      });
+      
+      return { success: true, zReportHtml };
+    } catch (error: any) {
+      console.error("[Caixa Controller] Error getting daily totals:", error);
       return { success: false, error: error.message };
     }
   });

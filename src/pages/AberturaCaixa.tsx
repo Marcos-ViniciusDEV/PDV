@@ -58,7 +58,7 @@ export default function AberturaCaixa() {
 
   const printReceipt = (html: string) => {
     const width = 400;
-    const height = 600;
+    const height = 700;
     const left = (window.screen.width - width) / 2;
     const top = (window.screen.height - height) / 2;
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { ConnectionStatus } from '../components/ConnectionStatus';
@@ -10,12 +10,34 @@ export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e: React.FormEvent | null, isZReport = false) => {
+    if (e) e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
+      if (isZReport) {
+        // Fluxo de Relatório Z Diário (sem login)
+        const result = await window.electron.db.getDailyZReport();
+        if (result.success && result.zReportHtml) {
+          const width = 400;
+          const height = 700;
+          const left = (window.screen.width - width) / 2;
+          const top = (window.screen.height - height) / 2;
+      
+          const printWindow = window.open("", "_blank", `width=${width},height=${height},top=${top},left=${left}`);
+      
+          if (printWindow) {
+            printWindow.document.write(result.zReportHtml);
+            printWindow.document.close();
+          }
+        } else {
+          setError('Erro ao gerar relatório Z: ' + (result.error || 'Desconhecido'));
+        }
+        setLoading(false);
+        return;
+      }
+
       // Usar nova função que aceita ID ou Email
       const user = await window.electron.db.validateUserByIdOrEmail(identifier, password);
       
@@ -30,6 +52,7 @@ export default function Login() {
           },
           isAuthenticated: true
         });
+        
         navigate('/pdv');
       } else {
         setError('ID/Email ou senha inválidos');
@@ -41,6 +64,37 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleSync = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await window.electron.sync.syncNow();
+      if (result && result.success) {
+        alert('Sincronização concluída com sucesso!');
+      } else {
+        setError('Erro na sincronização: ' + (result?.error || 'Desconhecido'));
+      }
+    } catch (err) {
+      console.error('Erro ao sincronizar:', err);
+      setError('Erro ao sincronizar vendas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Keyboard shortcut for Z Report
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.altKey && !e.metaKey && (e.target as HTMLElement).tagName !== 'INPUT') {
+        e.preventDefault();
+        handleLogin(null, true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="login-container">
@@ -73,9 +127,31 @@ export default function Login() {
             />
           </div>
 
-          {error && <div className="error">{error}</div>}
+          {error && (
+            <div style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid #ef4444',
+              color: '#ef4444',
+              padding: '12px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              fontSize: '14px',
+              textAlign: 'center',
+              fontWeight: '500'
+            }}>
+              {error}
+            </div>
+          )}
 
-          <button type="submit" disabled={loading} className="btn-primary">
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+            <button type="button" onClick={() => handleLogin(null, true)} disabled={loading} className="btn-secondary" style={{ flex: 1 }}>
+              Relatório Z
+            </button>
+            <button type="button" onClick={handleSync} disabled={loading} className="btn-secondary" style={{ flex: 1 }}>
+              Sincronizar
+            </button>
+          </div>
+          <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>

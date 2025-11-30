@@ -86,7 +86,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
         sale: {
           ccf: result.ccf || "000000",
           coo: result.coo || "000000",
-          date: new Date().toLocaleString("pt-BR"),
+          date: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
           items: items.map(item => ({
             productId: item.id,
             productName: item.name,
@@ -130,7 +130,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
 
   const printCoupon = (data: any) => {
     const width = 400;
-    const height = 600;
+    const height = 700;
     const left = (window.screen.width - width) / 2;
     const top = (window.screen.height - height) / 2;
 
@@ -142,34 +142,13 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
           <head>
             <title>Cupom Fiscal</title>
             <style>
-              @page { margin: 0; }
-              body { 
-                font-family: 'Courier New', Courier, monospace; 
-                font-size: 12px; 
-                margin: 0; 
-                padding: 10px; 
-                width: 100%;
-                max-width: 300px;
-                color: #000;
-              }
+              body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 10px; }
               .text-center { text-align: center; }
               .text-right { text-align: right; }
-              .text-left { text-align: left; }
               .bold { font-weight: bold; }
-              .divider { 
-                border-top: 1px dashed #000; 
-                margin: 5px 0; 
-                width: 100%;
-              }
-              .item-row { margin-bottom: 2px; }
-              .item-header { display: flex; justify-content: space-between; }
-              .item-details { display: flex; justify-content: space-between; }
-              
-              /* Table-like structure using flexbox for better control in narrow width */
-              .col-qtd { width: 30px; }
-              .col-un { width: 30px; }
-              .col-price { width: 70px; text-align: right; }
-              .col-total { width: 70px; text-align: right; }
+              .divider { border-top: 1px dashed #000; margin: 5px 0; }
+              table { width: 100%; border-collapse: collapse; }
+              td { vertical-align: top; padding: 2px 0; }
             </style>
           </head>
           <body>
@@ -189,39 +168,39 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
             
             <div class="divider"></div>
             
-            <div class="bold" style="margin-bottom: 2px;">ITEM CÓDIGO DESCRIÇÃO</div>
-            <div class="bold" style="display: flex; justify-content: space-between;">
-              <span class="col-qtd">QTD</span>
-              <span class="col-un">UN</span>
-              <span class="col-price">VL UNIT</span>
-              <span class="col-total">VL TOTAL</span>
-            </div>
+            <table>
+              <tr>
+                <td colspan="4" class="bold">ITEM CÓDIGO DESCRIÇÃO</td>
+              </tr>
+              <tr>
+                <td class="bold">QTD</td>
+                <td class="bold">UN</td>
+                <td class="bold text-right">VL UNIT</td>
+                <td class="bold text-right">VL TOTAL</td>
+              </tr>
+              ${data.sale.items.map((item: any, index: number) => `
+                <tr>
+                  <td colspan="4">${(index + 1).toString().padStart(3, "0")} ${item.productId} ${item.productName}</td>
+                </tr>
+                <tr>
+                  <td>${item.quantity}</td>
+                  <td>UN</td>
+                  <td class="text-right">${(item.unitPrice / 100).toFixed(2)}</td>
+                  <td class="text-right">${(item.total / 100).toFixed(2)}</td>
+                </tr>
+              `).join("")}
+            </table>
             
             <div class="divider"></div>
-            
-            ${data.sale.items.map((item: any, index: number) => `
-              <div class="item-row">
-                <div class="text-left">
-                  ${(index + 1).toString().padStart(3, "0")} ${item.productId} ${item.productName}
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span class="col-qtd">${item.quantity}</span>
-                  <span class="col-un">UN</span>
-                  <span class="col-price">${(item.unitPrice / 100).toFixed(2)}</span>
-                  <span class="col-total">${(item.total / 100).toFixed(2)}</span>
-                </div>
-              </div>
-            `).join("")}
-            
-            <div class="divider"></div>
-            
-            <div class="text-right bold" style="font-size: 14px; margin: 5px 0;">
-              TOTAL R$ ${(data.sale.total / 100).toFixed(2)}
-            </div>
             
             ${data.sale.discount > 0 ? `
-              <div class="text-right">Desconto R$ -${(data.sale.discount / 100).toFixed(2)}</div>
+              <div class="text-right">SUBTOTAL R$ ${(data.sale.subtotal / 100).toFixed(2)}</div>
+              <div class="text-right">DESCONTO R$ -${(data.sale.discount / 100).toFixed(2)}</div>
             ` : ''}
+            
+            <div class="text-right bold" style="font-size: 14px">TOTAL R$ ${(data.sale.total / 100).toFixed(2)}</div>
+            
+            <div class="divider"></div>
             
             <div class="text-right">
               ${data.sale.paymentMethod} R$ ${(data.sale.paidAmount || data.sale.total / 100).toFixed(2)}
@@ -236,8 +215,8 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
             <div class="text-center">${data.sale.date}</div>
             <div class="text-center">Operador: ${data.sale.operatorName}</div>
             
-            <div class="text-center" style="margin-top: 15px;">OBRIGADO PELA PREFERÊNCIA!</div>
-            <div class="text-center" style="font-size: 10px; margin-top: 5px;">Sistema PDV - Versão 1.0</div>
+            <div class="text-center" style="margin-top: 20px;">OBRIGADO PELA PREFERÊNCIA!</div>
+            <div class="text-center" style="font-size: 10px; margin-top: 10px;">Sistema PDV - Versão 1.0</div>
             
             <script>
               // window.print();

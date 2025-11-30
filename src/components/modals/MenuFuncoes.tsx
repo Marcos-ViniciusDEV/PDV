@@ -109,7 +109,7 @@ export default function MenuFuncoes({ isOpen, onClose, onSelect }: MenuFuncoesPr
               >
                 <span style={{ fontSize: '32px', color: 'var(--danger)' }}>-</span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '15px' }}>Sangria</span>
+                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'white' }}>Sangria</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Retirada</span>
                 </div>
               </button>
@@ -131,7 +131,7 @@ export default function MenuFuncoes({ isOpen, onClose, onSelect }: MenuFuncoesPr
               >
                 <span style={{ fontSize: '32px', color: 'var(--success)' }}>+</span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '15px' }}>Suprimento</span>
+                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'white' }}>Suprimento</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Entrada</span>
                 </div>
               </button>

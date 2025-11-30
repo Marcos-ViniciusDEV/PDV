@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electron', {
     suprimento: (data: any) => ipcRenderer.invoke('caixa:suprimento', data),
     getCaixaStatus: (operatorId: number) => ipcRenderer.invoke('caixa:status', { operatorId }),
     getCaixaTotals: (sessionId: number) => ipcRenderer.invoke('caixa:totals', { sessionId }),
+    getDailyZReport: () => ipcRenderer.invoke('caixa:daily-totals'),
     
     // Catalog events
     onCatalogUpdated: (callback: () => void) => {
@@ -80,6 +81,7 @@ declare global {
         suprimento: (data: { sessionId: number; amount: number; reason: string; operatorName: string }) => Promise<{ success: boolean; movement?: any; error?: string }>;
         getCaixaStatus: (operatorId: number) => Promise<{ isOpen: boolean; session?: any; error?: string }>;
         getCaixaTotals: (sessionId: number) => Promise<{ success: boolean; totals?: any; error?: string }>;
+        getDailyZReport: () => Promise<{ success: boolean; zReportHtml?: string; error?: string }>;
         
         onCatalogUpdated: (callback: () => void) => () => void;
       };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { useAuthStore } from '../../stores/authStore'; // Removed unused import
 
 interface MenuRelatoriosProps {
   isOpen: boolean;
@@ -12,7 +11,6 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
   const [step, setStep] = useState<'PASSWORD' | 'MENU'>('PASSWORD');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  // const { user } = useAuthStore(); // Removed unused variable
 
   useEffect(() => {
     if (isOpen) {
@@ -55,7 +53,7 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
   return (
     <div className="modal-overlay">
       <div className="modal-content" style={{ maxWidth: step === 'PASSWORD' ? '350px' : '500px' }}>
-        <h2>{step === 'PASSWORD' ? 'Acesso Restrito' : 'Menu de Relatórios'}</h2>
+        <h2>{step === 'PASSWORD' ? 'Acesso Restrito' : 'O que deseja fazer?'}</h2>
 
         {step === 'PASSWORD' ? (
           <>
@@ -108,21 +106,23 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
               <button
                 onClick={() => handleOption('CLOSE_REGISTER')}
                 className="menu-item"
-                style={{ 
+                style={{
+                  display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '24px',
-                  gap: '12px',
-                  textAlign: 'center',
-                  height: '140px',
+                  padding: '20px',
                   backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)'
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  gap: '12px',
+                  transition: 'all 0.2s'
                 }}
               >
                 <span style={{ fontSize: '32px' }}>⚠️</span>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'white' }}>Fechar Caixa (Z)</span>
+                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'white' }}>Fechar Caixa</span>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Encerrar dia</span>
                 </div>
               </button>
@@ -130,16 +130,18 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
               <button
                 onClick={() => handleOption('Z_REPORT')}
                 className="menu-item"
-                style={{ 
+                style={{
+                  display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '24px',
-                  gap: '12px',
-                  textAlign: 'center',
-                  height: '140px',
+                  padding: '20px',
                   backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)'
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  gap: '12px',
+                  transition: 'all 0.2s'
                 }}
               >
                 <span style={{ fontSize: '32px' }}>📄</span>

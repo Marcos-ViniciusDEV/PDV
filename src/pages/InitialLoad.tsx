@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConnectionStatus } from '../components/ConnectionStatus';
+import { useAuthStore } from '../stores/authStore';
 
 export default function InitialLoad() {
   const [progress, setProgress] = useState(0);
@@ -30,9 +31,16 @@ export default function InitialLoad() {
         console.warn('[InitialLoad] Falha na sincronização, continuando em modo offline');
       }
 
-      // Sempre navegar para login após 1 segundo
+      // Check if user is already authenticated
+      const { isAuthenticated } = useAuthStore.getState();
+
+      // Navigate based on auth state
       setTimeout(() => {
-        navigate('/login');
+        if (isAuthenticated) {
+          navigate('/pdv');
+        } else {
+          navigate('/login');
+        }
       }, 1000);
 
     } catch (err: unknown) {
@@ -43,9 +51,16 @@ export default function InitialLoad() {
       setProgress(100);
       setStatus('Modo offline - usando dados locais');
       
-      // Navegar para login mesmo com erro
+      // Check if user is already authenticated
+      const { isAuthenticated } = useAuthStore.getState();
+      
+      // Navigate based on auth state
       setTimeout(() => {
-        navigate('/login');
+        if (isAuthenticated) {
+          navigate('/pdv');
+        } else {
+          navigate('/login');
+        }
       }, 1500);
     }
   };
