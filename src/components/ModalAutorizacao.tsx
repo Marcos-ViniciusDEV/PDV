@@ -23,14 +23,20 @@ export default function ModalAutorizacao({
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === "123456") {
-      onSuccess();
-      onClose();
-    } else {
-      setError("Senha incorreta");
-      setPassword("");
+    
+    try {
+      const isValid = await window.electron.auth.validateSupervisor(password);
+      if (isValid) {
+        onSuccess();
+        onClose();
+      } else {
+        setError("Senha incorreta");
+        setPassword("");
+      }
+    } catch (err) {
+      setError("Erro ao validar senha");
     }
   };
 

@@ -35,6 +35,15 @@ export function registerIpcHandlers() {
       throw error;
     }
   });
+
+  ipcMain.handle("validate-supervisor", async (_, password: string) => {
+    try {
+      return await authService.validateSupervisor(password);
+    } catch (error: any) {
+      console.error("[Controller] validate-supervisor error:", error);
+      throw error;
+    }
+  });
   
   ipcMain.handle("get-users", async () => {
     try {
@@ -140,12 +149,13 @@ export function registerIpcHandlers() {
   // ========== CASH ==========
   ipcMain.handle("save-cash-movement", async (_, movement: any) => {
     try {
-      return await cashService.createMovement(
-        movement.type,
-        movement.amount,
-        movement.operatorId,
-        movement.reason
-      );
+      return await cashService.createMovement({
+        type: movement.type,
+        amount: movement.amount,
+        operatorId: movement.operatorId,
+        sessionId: movement.sessionId, // Ensure sessionId is passed if available, or handle it in service
+        reason: movement.reason
+      });
     } catch (error: any) {
       console.error("[Controller] save-cash-movement error:", error);
       throw error;

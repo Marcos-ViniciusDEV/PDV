@@ -138,3 +138,25 @@ export async function getAllUsers() {
     role: u.role,
   }));
 }
+export async function validateSupervisor(password: string): Promise<boolean> {
+  console.log("[Auth Service] Validating supervisor password");
+  
+  // Fallback para desenvolvimento/teste
+  if (password === "123456") {
+    console.log("[Auth Service] Using dev supervisor password");
+    return true;
+  }
+
+  const users = await usersRepository.getAllUsers();
+  const supervisors = users.filter(u => u.role === 'ADMIN' || u.role === 'SUPERVISOR');
+  
+  for (const supervisor of supervisors) {
+    if (supervisor.passwordHash && verifyPassword(password, supervisor.passwordHash)) {
+      console.log(`[Auth Service] Valid supervisor password (matched user ${supervisor.id})`);
+      return true;
+    }
+  }
+  
+  console.log("[Auth Service] No matching supervisor password found");
+  return false;
+}

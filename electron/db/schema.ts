@@ -43,6 +43,30 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
+ * Sessões de Caixa (Abertura/Fechamento)
+ */
+export const caixaSessions = mysqlTable("caixa_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  uuid: varchar("uuid", { length: 36 }).notNull().unique(),
+  operatorId: int("operatorId").notNull(),
+  operatorName: varchar("operatorName", { length: 255 }).notNull(),
+  openedAt: timestamp("openedAt").defaultNow().notNull(),
+  closedAt: timestamp("closedAt"),
+  initialAmount: int("initialAmount").notNull(), // Fundo de troco (centavos)
+  finalAmount: int("finalAmount"), // Valor em gaveta informado no fechamento (centavos)
+  status: mysqlEnum("status", ["OPEN", "CLOSED"]).default("OPEN").notNull(),
+  syncStatus: mysqlEnum("syncStatus", ["pending", "synced", "error"])
+    .default("pending")
+    .notNull(),
+  syncError: text("syncError"),
+  syncAttempts: int("syncAttempts").default(0).notNull(),
+  lastSyncAttempt: timestamp("lastSyncAttempt"),
+});
+
+export type CaixaSession = typeof caixaSessions.$inferSelect;
+export type InsertCaixaSession = typeof caixaSessions.$inferInsert;
+
+/**
  * Vendas realizadas no PDV (pendentes de sincronização)
  */
 export const sales = mysqlTable("sales", {
@@ -54,6 +78,8 @@ export const sales = mysqlTable("sales", {
   pdvId: varchar("pdvId", { length: 50 }).notNull(),
   operatorId: int("operatorId").notNull(),
   operatorName: varchar("operatorName", { length: 255 }).notNull(),
+  sessionId: int("sessionId") // Link para a sessão de caixa
+    .references(() => caixaSessions.id),
   total: int("total").notNull(), // em centavos
   discount: int("discount").notNull().default(0),
   netTotal: int("netTotal").notNull(),
@@ -105,6 +131,8 @@ export const cashMovements = mysqlTable("cash_movements", {
     .notNull(),
   amount: int("amount").notNull(), // em centavos
   operatorId: int("operatorId").notNull(),
+  sessionId: int("sessionId") // Link para a sessão de caixa
+    .references(() => caixaSessions.id),
   reason: text("reason"),
   syncStatus: mysqlEnum("syncStatus", ["pending", "synced", "error"])
     .default("pending")

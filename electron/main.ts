@@ -2,11 +2,15 @@ import { app, BrowserWindow } from "electron";
 import path from "path";
 import { initDatabase } from "./db/config";
 import { registerIpcHandlers } from "./controllers/ipc.controller";
+import { registerCaixaHandlers } from "./controllers/caixa.controller";
 import * as syncService from "./services/sync.service";
 
 let mainWindow: BrowserWindow | null = null;
 
 
+
+// Desabilitar aceleração de hardware para evitar travamentos e telas pretas
+app.disableHardwareAcceleration();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -52,6 +56,8 @@ app.whenReady().then(async () => {
     // Registrar handlers IPC
     console.log("[Main] Registering IPC handlers...");
     registerIpcHandlers();
+    registerCaixaHandlers();
+    console.log("[Main] ✅ IPC handlers registered");
     console.log("[Main] ✅ IPC handlers registered");
 
     // Criar janela

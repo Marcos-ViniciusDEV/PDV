@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import * as salesRepository from "../repositories/sales.repository";
+import * as cashService from "./cash.service";
 import type { InsertSale, InsertSaleItem } from "../db/schema";
 
 /**
@@ -29,6 +30,12 @@ interface CreateSaleInput {
 export async function createSale(input: CreateSaleInput) {
   console.log("[Sales Service] Creating sale...");
   
+  // Verificar sessão aberta
+  const session = await cashService.getCurrentSession(input.operatorId);
+  if (!session) {
+    throw new Error("Não há caixa aberto para este operador.");
+  }
+
   // Gerar UUID
   const uuid = uuidv4();
   
@@ -57,6 +64,7 @@ export async function createSale(input: CreateSaleInput) {
     pdvId: input.pdvId,
     operatorId: input.operatorId,
     operatorName: input.operatorName,
+    sessionId: session.id, // Link para a sessão
     total: itemsTotal,
     discount,
     netTotal,

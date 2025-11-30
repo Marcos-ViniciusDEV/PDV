@@ -1,4 +1,5 @@
 import { drizzle, MySql2Database } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 import * as schema from "./schema";
 
@@ -18,7 +19,8 @@ export async function getDb(): Promise<MySql2Database<typeof schema>> {
     
     console.log("[DB] Connecting to database...");
     
-    _db = drizzle(DATABASE_URL, { schema, mode: "default" });
+    const connection = await mysql.createConnection(DATABASE_URL);
+    _db = drizzle(connection, { schema, mode: "default" });
     
     console.log("[DB] ✅ Connected successfully");
     return _db;

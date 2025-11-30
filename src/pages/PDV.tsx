@@ -1,21 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useVendaStore } from '../stores/vendaStore';
 import BuscaProduto, { type BuscaProdutoRef } from '../components/BuscaProduto';
 import Carrinho from '../components/Carrinho';
 import ModalPagamento from '../components/ModalPagamento';
 import { ConnectionStatus } from '../components/ConnectionStatus';
-import ModalUtilidades from '../components/ModalUtilidades';
 import ModalAutorizacao from '../components/ModalAutorizacao';
 import ModalRemoverItem from '../components/ModalRemoverItem';
 import ModalDesconto from '../components/ModalDesconto';
 import ModalOpcoesDesconto from '../components/ModalOpcoesDesconto';
+import MenuRelatorios from '../components/modals/MenuRelatorios';
+import MenuFuncoes from '../components/modals/MenuFuncoes';
+import SangriaModal from '../components/modals/SangriaModal';
 
 export default function PDV() {
   const { user, logout } = useAuthStore();
   const { items, getNetTotal } = useVendaStore();
+  const navigate = useNavigate();
+  
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  
   const [showPayment, setShowPayment] = useState(false);
-  const [showUtils, setShowUtils] = useState(false);
+  const [showMenuRelatorios, setShowMenuRelatorios] = useState(false);
+  const [showMenuFuncoes, setShowMenuFuncoes] = useState(false);
+  const [showSangriaModal, setShowSangriaModal] = useState(false);
+  const [sangriaType, setSangriaType] = useState<'SANGRIA' | 'SUPRIMENTO'>('SANGRIA');
+  
   const [showAuthDelete, setShowAuthDelete] = useState(false);
   const [showRemoveItem, setShowRemoveItem] = useState(false);
   const [showAuthDiscount, setShowAuthDiscount] = useState(false);
@@ -23,6 +34,19 @@ export default function PDV() {
   const [showDiscountOptions, setShowDiscountOptions] = useState(false);
   const [showAuthCancel, setShowAuthCancel] = useState(false);
   const buscaProdutoRef = useRef<BuscaProdutoRef>(null);
+
+  // Check session on mount
+  useEffect(() => {
+    if (user) {
+      window.electron.db.getCaixaStatus(user.id).then((status) => {
+        if (!status.isOpen || !status.session) {
+          navigate('/abertura-caixa');
+        } else {
+          setSessionId(status.session.id);
+        }
+      });
+    }
+  }, [user, navigate]);
 
   const handleFinalizeSale = () => {
     if (items.length === 0) {
@@ -100,6 +124,12 @@ export default function PDV() {
     }
   };
 
+  const handleMenuFuncoesSelect = (type: 'SANGRIA' | 'SUPRIMENTO') => {
+    setSangriaType(type);
+    setShowMenuFuncoes(false);
+    setShowSangriaModal(true);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if input/textarea is focused
@@ -141,8 +171,8 @@ export default function PDV() {
       if (e.key === 'F2') {
         e.preventDefault();
         // Only focus if no modals are open
-        const hasModalOpen = showPayment || showUtils || showAuthDelete || 
-                            showRemoveItem || showAuthDiscount || showDiscountModal || 
+        const hasModalOpen = showPayment || showMenuRelatorios || showMenuFuncoes || showSangriaModal ||
+                            showAuthDelete || showRemoveItem || showAuthDiscount || showDiscountModal || 
                             showDiscountOptions || showAuthCancel;
         if (!hasModalOpen) {
           buscaProdutoRef.current?.focus();
@@ -155,15 +185,23 @@ export default function PDV() {
         handleRemoveItemRequest();
       }
 
-      // R - Menu/Utilidades
+      // R - Menu Relatórios
       if (e.key.toLowerCase() === 'r') {
         e.preventDefault();
-        setShowUtils(true);
+        setShowMenuRelatorios(true);
+      }
+
+      // F - Menu Funções
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setShowMenuFuncoes(true);
       }
       
       // Escape - Fechar modais
       if (e.key === 'Escape') {
-        setShowUtils(false);
+        setShowMenuRelatorios(false);
+        setShowMenuFuncoes(false);
+        setShowSangriaModal(false);
         setShowAuthDelete(false);
         setShowRemoveItem(false);
         setShowAuthDiscount(false);
@@ -175,7 +213,7 @@ export default function PDV() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [items]);
+  }, [items, showPayment, showMenuRelatorios, showMenuFuncoes, showSangriaModal]);
 
   // Catalog Update Notification Logic
   const [updateStatus, setUpdateStatus] = useState<'idle' | 'updating' | 'updated'>('idle');
@@ -300,9 +338,13 @@ export default function PDV() {
                 <span>DEL</span>
                 <span>Remover Item</span>
               </button>
-              <button className="action-btn" onClick={() => setShowUtils(true)}>
+              <button className="action-btn" onClick={() => setShowMenuRelatorios(true)}>
                 <span>R</span>
-                <span>Menu / Utils</span>
+                <span>Relatórios / Fechar</span>
+              </button>
+              <button className="action-btn" onClick={() => setShowMenuFuncoes(true)}>
+                <span>F</span>
+                <span>Funções Caixa</span>
               </button>
             </div>
           </div>
@@ -328,7 +370,7 @@ export default function PDV() {
         </div>
       </div>
 
-      {/* Modal de Pagamento */}
+      {/* Modais */}
       {showPayment && (
         <ModalPagamento
           onClose={() => setShowPayment(false)}
@@ -338,10 +380,27 @@ export default function PDV() {
         />
       )}
 
-      {/* Modal de Utilidades */}
-      {showUtils && (
-        <ModalUtilidades
-          onClose={() => setShowUtils(false)}
+      {showMenuRelatorios && (
+        <MenuRelatorios
+          isOpen={showMenuRelatorios}
+          onClose={() => setShowMenuRelatorios(false)}
+        />
+      )}
+
+      {showMenuFuncoes && (
+        <MenuFuncoes
+          isOpen={showMenuFuncoes}
+          onClose={() => setShowMenuFuncoes(false)}
+          onSelect={handleMenuFuncoesSelect}
+        />
+      )}
+
+      {showSangriaModal && sessionId && (
+        <SangriaModal
+          isOpen={showSangriaModal}
+          onClose={() => setShowSangriaModal(false)}
+          sessionId={sessionId}
+          type={sangriaType}
         />
       )}
 
