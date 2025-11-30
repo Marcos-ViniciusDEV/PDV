@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../stores/authStore';
+// import { useAuthStore } from '../../stores/authStore'; // Removed unused import
 
 interface MenuRelatoriosProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
   const [step, setStep] = useState<'PASSWORD' | 'MENU'>('PASSWORD');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  // const { user } = useAuthStore(); // Removed unused variable
 
   useEffect(() => {
     if (isOpen) {
