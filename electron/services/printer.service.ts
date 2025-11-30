@@ -118,6 +118,7 @@ export function generateOpeningReceipt(data: {
 }
 
 export function generateMovementReceipt(data: {
+  pdvId: string;
   type: string;
   amount: number;
   reason: string;
@@ -129,6 +130,7 @@ export function generateMovementReceipt(data: {
       <head>${COMMON_STYLE}</head>
       <body>
         <div class="text-center bold">COMPROVANTE DE ${data.type}</div>
+        <div class="text-center">PDV: ${data.pdvId}</div>
         
         <div class="divider"></div>
         
@@ -269,7 +271,7 @@ export function generateZReport(data: {
         
         <div class="divider"></div>
         
-        <div class="text-center bold">REDUÇÃO Z</div>
+        <div class="text-center bold">FECHAMENTO DE CAIXA</div>
         
         <div style="display: flex; justify-content: space-between;">
           <span>MOVIMENTO DO DIA:</span>
@@ -345,48 +347,9 @@ export function generateZReport(data: {
         <div class="text-center bold">DETALHAMENTO POR OPERADOR</div>
         ${operatorRows}
 
-        <div class="divider"></div>
+
         
-        <div class="text-center bold">RELATÓRIO GERENCIAL</div>
-        
-        <div style="display: flex; justify-content: space-between;">
-          <span>Sangrias:</span>
-          <span>R$ ${(data.bleedsTotal / 100).toFixed(2)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Suprimentos:</span>
-          <span>R$ ${(data.suppliesTotal / 100).toFixed(2)}</span>
-        </div>
-        
-        <div class="divider"></div>
-        
-        <div class="bold">MEMÓRIA FISCAL</div>
-        <div style="display: flex; justify-content: space-between;" class="bold">
-          <span>GT (GRANDE TOTAL):</span>
-          <span>R$ ${(fiscal.gt / 100).toFixed(2)}</span>
-        </div>
-        
-        <div class="divider"></div>
-        
-        <div style="display: flex; justify-content: space-between;">
-          <span>Venda do Dia:</span>
-          <span>R$ ${(fiscal.grossTotal / 100).toFixed(2)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
-          <span>Venda Semanal:</span>
-          <span>R$ ${(fiscal.weeklyTotal / 100).toFixed(2)}</span>
-        </div>
-        
-        <div class="divider"></div>
-        <div class="bold text-center">VENDA MENSAL</div>
-        ${Object.entries(fiscal.monthlyTotals || {}).map(([month, total]) => `
-          <div style="display: flex; justify-content: space-between; font-size: 11px;">
-            <span>${month}:</span>
-            <span>R$ ${(total / 100).toFixed(2)}</span>
-          </div>
-        `).join("")}
-        
-        <div class="divider"></div>
+
         
         <div class="text-center">FAB: BE091210100011223344</div>
         <div class="text-center">MOD: ECF-IF VERSÃO: 01.00.00</div>

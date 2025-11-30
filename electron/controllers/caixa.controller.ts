@@ -63,18 +63,19 @@ export function registerCaixaHandlers() {
   });
 
   // Sangria
-  ipcMain.handle("caixa:sangria", async (_, { sessionId, amount, reason, operatorName }) => {
+  ipcMain.handle("caixa:sangria", async (_, { sessionId, amount, reason, operatorName, operatorId }) => {
     try {
       const movement = await cashService.createMovement({
         type: "SANGRIA",
         amount,
         reason,
         sessionId,
-        operatorId: 0, // TODO: Passar ID do operador logado
+        operatorId,
       });
       
       // Imprimir comprovante
       const receiptHtml = printerService.generateMovementReceipt({
+        pdvId: "PDV-01",
         type: "SANGRIA",
         amount,
         reason,
@@ -82,9 +83,9 @@ export function registerCaixaHandlers() {
         date: movement.createdAt,
       });
       
-      await printerService.printReceipt(receiptHtml);
+      // await printerService.printReceipt(receiptHtml);
       
-      return { success: true, movement };
+      return { success: true, movement, receiptHtml };
     } catch (error: any) {
       console.error("[Caixa Controller] Error creating bleed:", error);
       return { success: false, error: error.message };
@@ -92,18 +93,19 @@ export function registerCaixaHandlers() {
   });
 
   // Suprimento
-  ipcMain.handle("caixa:suprimento", async (_, { sessionId, amount, reason, operatorName }) => {
+  ipcMain.handle("caixa:suprimento", async (_, { sessionId, amount, reason, operatorName, operatorId }) => {
     try {
       const movement = await cashService.createMovement({
         type: "REFORCO",
         amount,
         reason,
         sessionId,
-        operatorId: 0, // TODO: Passar ID do operador logado
+        operatorId,
       });
       
       // Imprimir comprovante
       const receiptHtml = printerService.generateMovementReceipt({
+        pdvId: "PDV-01",
         type: "SUPRIMENTO",
         amount,
         reason,
@@ -111,9 +113,9 @@ export function registerCaixaHandlers() {
         date: movement.createdAt,
       });
       
-      await printerService.printReceipt(receiptHtml);
+      // await printerService.printReceipt(receiptHtml);
       
-      return { success: true, movement };
+      return { success: true, movement, receiptHtml };
     } catch (error: any) {
       console.error("[Caixa Controller] Error creating supply:", error);
       return { success: false, error: error.message };

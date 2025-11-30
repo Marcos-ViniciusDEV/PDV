@@ -36,6 +36,7 @@ export default function SangriaModal({ isOpen, onClose, sessionId, type }: Sangr
         amount: amountInCents,
         reason,
         operatorName: user.name,
+        operatorId: user.id,
       };
 
       let result;
@@ -46,6 +47,9 @@ export default function SangriaModal({ isOpen, onClose, sessionId, type }: Sangr
       }
 
       if (result.success) {
+        if (result.receiptHtml) {
+          printReceipt(result.receiptHtml);
+        }
         onClose();
         setAmount('');
         setReason('');
@@ -56,6 +60,20 @@ export default function SangriaModal({ isOpen, onClose, sessionId, type }: Sangr
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const printReceipt = (html: string) => {
+    const width = 400;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
+    const printWindow = window.open("", "_blank", `width=${width},height=${height},top=${top},left=${left}`);
+
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
     }
   };
 
