@@ -205,6 +205,7 @@ export function generateZReport(data: {
     weeklyTotal: number;
     monthlyTotals: Record<string, number>;
   };
+  title?: string;
 }) {
   const diff = data.finalAmount - data.netTotal;
   const fiscal = data.fiscal || {
@@ -213,6 +214,8 @@ export function generateZReport(data: {
     weeklyTotal: 0, monthlyTotals: {}
   };
   
+  const reportTitle = data.title || "REDUÇÃO Z";
+
   const paymentRows = Object.entries(data.paymentMethods)
     .map(([method, amount]) => `
       <div style="display: flex; justify-content: space-between;">
@@ -271,7 +274,7 @@ export function generateZReport(data: {
         
         <div class="divider"></div>
         
-        <div class="text-center bold">FECHAMENTO DE CAIXA</div>
+        <div class="text-center bold">${reportTitle}</div>
         
         <div style="display: flex; justify-content: space-between;">
           <span>MOVIMENTO DO DIA:</span>
@@ -346,6 +349,26 @@ export function generateZReport(data: {
 
         <div class="text-center bold">DETALHAMENTO POR OPERADOR</div>
         ${operatorRows}
+
+        <div class="divider"></div>
+
+        <div class="text-center bold">VENDA SEMANAL</div>
+        <div style="display: flex; justify-content: space-between;">
+          <span>Semana Atual:</span>
+          <span>R$ ${(fiscal.weeklyTotal / 100).toFixed(2)}</span>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="text-center bold">VENDA MENSAL</div>
+        ${Object.entries(fiscal.monthlyTotals).map(([month, total]) => `
+          <div style="display: flex; justify-content: space-between;">
+            <span>${month}:</span>
+            <span>R$ ${(total / 100).toFixed(2)}</span>
+          </div>
+        `).join("")}
+        
+        <div class="divider"></div>
 
 
         

@@ -13,6 +13,7 @@ import ModalOpcoesDesconto from '../components/ModalOpcoesDesconto';
 import MenuRelatorios from '../components/modals/MenuRelatorios';
 import MenuFuncoes from '../components/modals/MenuFuncoes';
 import SangriaModal from '../components/modals/SangriaModal';
+import ModalConsultarPreco from '../components/modals/ModalConsultarPreco';
 
 export default function PDV() {
   const { user, logout } = useAuthStore();
@@ -33,6 +34,7 @@ export default function PDV() {
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showDiscountOptions, setShowDiscountOptions] = useState(false);
   const [showAuthCancel, setShowAuthCancel] = useState(false);
+  const [showPriceCheck, setShowPriceCheck] = useState(false);
   const buscaProdutoRef = useRef<BuscaProdutoRef>(null);
 
   // Check session on mount
@@ -173,7 +175,7 @@ export default function PDV() {
         // Only focus if no modals are open
         const hasModalOpen = showPayment || showMenuRelatorios || showMenuFuncoes || showSangriaModal ||
                             showAuthDelete || showRemoveItem || showAuthDiscount || showDiscountModal || 
-                            showDiscountOptions || showAuthCancel;
+                            showDiscountOptions || showAuthCancel || showPriceCheck;
         if (!hasModalOpen) {
           buscaProdutoRef.current?.focus();
         }
@@ -207,7 +209,15 @@ export default function PDV() {
         setShowAuthDiscount(false);
         setShowDiscountModal(false);
         setShowDiscountOptions(false);
+        setShowDiscountOptions(false);
         setShowAuthCancel(false);
+        setShowPriceCheck(false);
+      }
+      
+      // F3 - Consultar Preço
+      if (e.key === 'F3') {
+        e.preventDefault();
+        setShowPriceCheck(true);
       }
     };
 
@@ -321,6 +331,10 @@ export default function PDV() {
               <button className="action-btn" onClick={handleDiscountRequest}>
                 <span>F9</span>
                 <span>Desconto</span>
+              </button>
+              <button className="action-btn" onClick={() => setShowPriceCheck(true)}>
+                <span>F3</span>
+                <span>Consultar Preço</span>
               </button>
               <button className="action-btn">
                 <span>F5</span>
@@ -453,6 +467,12 @@ export default function PDV() {
           onSuccess={handleAuthCancelSuccess}
           title="Autorização de Cancelamento"
           description="Digite a senha do supervisor para cancelar o cupom"
+        />
+      )}
+
+      {showPriceCheck && (
+        <ModalConsultarPreco
+          onClose={() => setShowPriceCheck(false)}
         />
       )}
     </div>

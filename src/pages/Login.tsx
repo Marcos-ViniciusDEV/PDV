@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { ConnectionStatus } from '../components/ConnectionStatus';
+import ModalConsultarPreco from '../components/modals/ModalConsultarPreco';
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPriceCheck, setShowPriceCheck] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent | null, isZReport = false) => {
@@ -90,6 +92,18 @@ export default function Login() {
         e.preventDefault();
         handleLogin(null, true);
       }
+
+      // F3 - Consultar Preço
+      if (e.key === 'F3') {
+        e.preventDefault();
+        setShowPriceCheck(true);
+      }
+
+      // Space - Consultar Preço (se não estiver digitando)
+      if (e.code === 'Space' && (e.target as HTMLElement).tagName !== 'INPUT') {
+        e.preventDefault();
+        setShowPriceCheck(true);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -151,11 +165,26 @@ export default function Login() {
               Sincronizar
             </button>
           </div>
+          <button 
+            type="button" 
+            onClick={() => setShowPriceCheck(true)} 
+            disabled={loading} 
+            className="btn-secondary" 
+            style={{ width: '100%', marginBottom: '10px', backgroundColor: '#3b82f6', color: 'white', border: 'none' }}
+          >
+            Consultar Preço (Espaço)
+          </button>
           <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
       </div>
+      
+      {showPriceCheck && (
+        <ModalConsultarPreco
+          onClose={() => setShowPriceCheck(false)}
+        />
+      )}
     </div>
   );
 }

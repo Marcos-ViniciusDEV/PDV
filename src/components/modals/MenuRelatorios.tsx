@@ -39,14 +39,37 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
     }
   };
 
-  const handleOption = (option: 'Z_REPORT' | 'CLOSE_REGISTER') => {
+  const handleOption = async (option: 'Z_REPORT' | 'CLOSE_REGISTER') => {
     if (option === 'CLOSE_REGISTER') {
       navigate('/fechamento-caixa');
       onClose();
     } else if (option === 'Z_REPORT') {
-      // TODO: Implement view Z Report without closing
-      // For now, maybe just navigate to closure or show a modal
-      alert('Funcionalidade de visualização de Z em breve. Use o Fechamento de Caixa.');
+      try {
+        const result = await window.electron.db.getDailyZReport();
+        if (result.success && result.zReportHtml) {
+          printReceipt(result.zReportHtml);
+          onClose();
+        } else {
+          alert('Erro ao gerar Redução Z: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Error generating Z report:', err);
+        alert('Erro ao gerar Redução Z');
+      }
+    }
+  };
+
+  const printReceipt = (html: string) => {
+    const width = 400;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
+    const printWindow = window.open("", "_blank", `width=${width},height=${height},top=${top},left=${left}`);
+
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
     }
   };
 

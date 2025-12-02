@@ -51,6 +51,7 @@ export function registerCaixaHandlers() {
         paymentMethods: result.totals.paymentMethods,
         operatorSales: result.totals.operatorSales,
         detailedMovements: result.totals.detailedMovements,
+        title: "FECHAMENTO DE CAIXA"
       });
       
       // await printerService.printReceipt(zReportHtml);
@@ -166,6 +167,7 @@ export function registerCaixaHandlers() {
         operatorSales: totals.operatorSales,
         detailedMovements: totals.detailedMovements,
         fiscal: totals.fiscal,
+        title: "REDUÇÃO Z"
       });
       
       return { success: true, zReportHtml };
