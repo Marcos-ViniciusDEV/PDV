@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import * as salesRepository from "../repositories/sales.repository";
 import * as cashService from "./cash.service";
-import type { InsertSale, InsertSaleItem } from "../db/schema";
+import type { InsertSale, InsertSaleItem, InsertSalePayment } from "../db/schema";
 
 /**
  * Service de vendas
@@ -19,7 +19,10 @@ interface CreateSaleInput {
     unitPrice: number;
     discount?: number;
   }>;
-  paymentMethod: string;
+  payments: Array<{
+    method: string;
+    amount: number;
+  }>;
   discount?: number;
 }
 
@@ -68,7 +71,7 @@ export async function createSale(input: CreateSaleInput) {
     total: itemsTotal,
     discount,
     netTotal,
-    paymentMethod: input.paymentMethod,
+    paymentMethod: input.payments[0]?.method || "MISTO", // Primary method or MISTO
     couponType: "NFC-e",
     syncStatus: "pending",
   };
@@ -81,9 +84,15 @@ export async function createSale(input: CreateSaleInput) {
     total: item.quantity * item.unitPrice,
     discount: item.discount || 0,
   }));
+
+  // Preparar pagamentos
+  const payments: Omit<InsertSalePayment, "saleId">[] = input.payments.map((p) => ({
+    method: p.method,
+    amount: p.amount,
+  }));
   
   // Criar venda
-  const sale = await salesRepository.createSale(saleData, items);
+  const sale = await salesRepository.createSale(saleData, items, payments);
   
   console.log(`[Sales Service] ✅ Sale created: ${sale.numeroVenda} (${sale.uuid})`);
   

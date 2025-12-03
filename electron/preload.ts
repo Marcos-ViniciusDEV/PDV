@@ -66,7 +66,7 @@ declare global {
         validateUser: (email: string, password: string) => Promise<any>;
         validateUserByIdOrEmail: (identifier: string, password: string) => Promise<any>;
         saveCatalog: (data: any) => Promise<void>;
-        saveOrder: (order: any) => Promise<{ uuid: string; ccf: string; coo: string }>;
+        saveOrder: (order: any) => Promise<{ uuid: string; ccf: string; coo: string; numeroVenda: string }>;
         cancelSale: (saleData: any) => Promise<{ uuid: string; ccf: string; coo: string; status: string }>;
         getPendingOrders: () => Promise<any[]>;
         getRecentSales: (limit?: number) => Promise<any[]>;

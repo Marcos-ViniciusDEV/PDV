@@ -3,11 +3,13 @@ import { getDb } from "../db/config";
 import {
   sales,
   saleItems,
+  salePayments,
   counters,
   type Sale,
   type InsertSale,
   type SaleItem,
   type InsertSaleItem,
+  type InsertSalePayment,
 } from "../db/schema";
 
 /**
@@ -16,11 +18,12 @@ import {
  */
 
 /**
- * Cria uma nova venda com seus itens (transação)
+ * Cria uma nova venda com seus itens e pagamentos (transação)
  */
 export async function createSale(
   saleData: InsertSale,
-  items: Omit<InsertSaleItem, "saleId">[]
+  items: Omit<InsertSaleItem, "saleId">[],
+  payments: Omit<InsertSalePayment, "saleId">[] = []
 ): Promise<Sale> {
   const db = await getDb();
   
@@ -35,6 +38,16 @@ export async function createSale(
     }));
     
     await db.insert(saleItems).values(itemsWithSaleId);
+  }
+
+  // Inserir pagamentos
+  if (payments.length > 0) {
+    const paymentsWithSaleId = payments.map((payment) => ({
+      ...payment,
+      saleId: result.id,
+    }));
+    
+    await db.insert(salePayments).values(paymentsWithSaleId);
   }
   
   // Buscar venda completa

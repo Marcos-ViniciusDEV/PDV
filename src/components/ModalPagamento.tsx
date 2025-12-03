@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuthStore } from "../stores/authStore";
 import { useVendaStore } from "../stores/vendaStore";
 
@@ -7,10 +7,28 @@ interface ModalPagamentoProps {
   onSuccess: () => void;
 }
 
+interface Payment {
+  method: string;
+  amount: number;
+}
+
+const PAYMENT_METHODS = [
+  { id: "DINHEIRO", label: "Dinheiro", icon: "💵" },
+  { id: "DEBITO", label: "Débito", icon: "💳" },
+  { id: "CREDITO", label: "Crédito", icon: "💳" },
+  { id: "PIX", label: "PIX", icon: "📱" },
+];
+
 export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoProps) {
-  const [paymentMethod, setPaymentMethod] = useState<string>("");
-  const [paidAmount, setPaidAmount] = useState<string>("");
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [selectedMethodIndex, setSelectedMethodIndex] = useState(0);
+  const [amountInput, setAmountInput] = useState("");
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const inputRef = useRef<HTMLInputElement>(null);
+  const methodRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
   const user = useAuthStore((state) => state.user);
   const { items, getNetTotal, getDiscount, getTotal, clear } = useVendaStore();
 
@@ -18,33 +36,123 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
   const discount = getDiscount();
   const subtotal = getTotal();
 
-  const handlePayment = async () => {
-    if (!paymentMethod) {
-      alert("Selecione uma forma de pagamento");
+  const totalPaid = useMemo(() => payments.reduce((sum, p) => sum + p.amount, 0), [payments]);
+  const remaining = Math.max(0, total - totalPaid);
+  const change = Math.max(0, totalPaid - total);
+
+  // Initialize amount input with remaining value when not focused
+  useEffect(() => {
+    if (!isInputFocused && remaining > 0) {
+      setAmountInput((remaining / 100).toFixed(2));
+    }
+  }, [remaining, isInputFocused]);
+
+  // Keyboard Navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (loading) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (isInputFocused) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleAddPayment();
+        } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+          // Prevent changing method while typing amount, or maybe allow?
+          // Better to require leaving input to change method
+          e.preventDefault();
+          inputRef.current?.blur();
+          setIsInputFocused(false);
+        }
+        return;
+      }
+
+      // Navigation when input is NOT focused
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedMethodIndex((prev) => (prev + 1) % PAYMENT_METHODS.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedMethodIndex((prev) => (prev - 1 + PAYMENT_METHODS.length) % PAYMENT_METHODS.length);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (remaining <= 0 && payments.length > 0) {
+          handleFinalize();
+        } else {
+          // Focus input to add payment
+          setIsInputFocused(true);
+          setTimeout(() => inputRef.current?.select(), 10);
+        }
+      } else if (e.key === "F12") {
+        e.preventDefault();
+        if (remaining <= 0) handleFinalize();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [loading, isInputFocused, selectedMethodIndex, amountInput, remaining, payments]);
+
+  // Focus management
+  useEffect(() => {
+    if (isInputFocused) {
+      inputRef.current?.focus();
+    } else {
+      methodRefs.current[selectedMethodIndex]?.focus();
+    }
+  }, [isInputFocused, selectedMethodIndex]);
+
+  const handleAddPayment = () => {
+    const amount = Math.round(parseFloat(amountInput.replace(",", ".")) * 100);
+    
+    if (isNaN(amount) || amount <= 0) {
+      alert("Valor inválido");
       return;
     }
 
-    if (paymentMethod === "DINHEIRO" && (!paidAmount || parseFloat(paidAmount) < total / 100)) {
-      alert("Valor pago insuficiente");
+    const method = PAYMENT_METHODS[selectedMethodIndex].id;
+    
+    // Allow overpayment only for CASH
+    if (method !== "DINHEIRO" && amount > remaining) {
+      alert("Valor não pode ser maior que o restante para este método");
+      return;
+    }
+
+    setPayments([...payments, { method, amount }]);
+    setAmountInput("");
+    setIsInputFocused(false);
+  };
+
+  const handleRemovePayment = (index: number) => {
+    setPayments(payments.filter((_, i) => i !== index));
+  };
+
+  const handleFinalize = async () => {
+    if (remaining > 0) {
+      alert("Ainda há valor pendente a pagar");
       return;
     }
 
     setLoading(true);
 
     try {
-      // Gerar número da venda
       const orderNumber = `PDV001-${Date.now()}`;
 
-      // Salvar venda
       const result = await window.electron.db.saveOrder({
         orderNumber,
-        total: subtotal, // Save gross total
-        discount: discount, // Save discount
+        total: subtotal,
+        discount: discount,
         netTotal: total,
-        paymentMethod,
+        paymentMethod: payments[0].method, // Legacy field
+        payments: payments, // New field
         operatorId: user?.id,
         operatorName: user?.name,
-        pdvId: "PDV001", // TODO: Get from config
+        pdvId: "PDV001",
         couponType: "NFC-e",
         items: items.map((item) => ({
           productId: item.id,
@@ -56,56 +164,36 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
         })),
       });
 
-      // Se pagamento em dinheiro, registrar movimento de caixa
-      if (paymentMethod === "DINHEIRO") {
+      // Registrar movimentos de caixa para pagamentos em dinheiro
+      const cashTotal = payments
+        .filter(p => p.method === "DINHEIRO")
+        .reduce((sum, p) => sum + p.amount, 0);
+      
+      // Se houve troco, o valor real que entrou no caixa é (Total em Dinheiro - Troco)
+      // Mas contabilmente registramos a venda. O troco sai do caixa?
+      // Simplificação: Registra o valor LIQUIDO em dinheiro que ficou no caixa.
+      // Ou registra Entrada de X e Saída de Troco Y?
+      // Vamos registrar Entrada do valor exato que cobre a parte em dinheiro.
+      // Se pagou 100 em dinheiro para conta de 90, entrou 90.
+      // Se pagou 50 em dinheiro e 40 em cartão para conta de 90, entrou 50.
+      // O troco é devolvido na hora.
+      
+      const cashEntry = Math.max(0, cashTotal - change);
+
+      if (cashEntry > 0) {
         await window.electron.db.saveCashMovement({
           type: "VENDA",
-          amount: total,
+          amount: cashEntry,
           operatorId: user?.id,
+          reason: `Venda ${result.numeroVenda}`
         });
       }
 
-      // Limpar carrinho
       clear();
-
-      // Tentar sincronizar
       await window.electron.sync.syncNow();
 
-      console.log("Venda salva:", result);
-
-      const changeValue = calculateChange();
-      const finalPaidAmount = paidAmount ? parseFloat(paidAmount) : total / 100;
-
-      // Simular impressão do cupom
-      const couponData = {
-        company: {
-          name: "MERCADO EXEMPLO LTDA",
-          cnpj: "12.345.678/0001-90",
-          address: "AV. BRASIL, 1000 - CENTRO",
-        },
-        sale: {
-          ccf: result.ccf || "000000",
-          coo: result.coo || "000000",
-          date: new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
-          items: items.map(item => ({
-            productId: item.id,
-            productName: item.name,
-            quantity: item.quantity,
-            unitPrice: item.price,
-            total: item.price * item.quantity
-          })),
-          subtotal: subtotal,
-          discount: discount,
-          total: total,
-          paymentMethod: paymentMethod,
-          paidAmount: finalPaidAmount,
-          change: changeValue,
-          pdvId: "PDV001", // Hardcoded for now as per saveOrder
-          operatorName: user?.name || "Não identificado",
-        },
-      };
-
-      printCoupon(couponData);
+      // Print Coupon
+      printCoupon(result, payments, change);
 
       onSuccess();
     } catch (error) {
@@ -116,19 +204,12 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
     }
   };
 
-  const calculateChange = () => {
-    if (!paidAmount) return 0;
-    // Arredondar para evitar erros de ponto flutuante (ex: 4.67 * 100 = 466.999...)
-    const paid = Math.round(parseFloat(paidAmount) * 100);
-    if (isNaN(paid)) return 0;
-    return Math.max(0, paid - total);
-  };
-
   const formatCurrency = (value: number) => {
     return `R$ ${(value / 100).toFixed(2)}`;
   };
 
-  const printCoupon = (data: any) => {
+  const printCoupon = (sale: any, payments: Payment[], change: number) => {
+    // ... (Reuse existing print logic but adapted for multiple payments)
     const width = 400;
     const height = 700;
     const left = (window.screen.width - width) / 2;
@@ -152,79 +233,50 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
             </style>
           </head>
           <body>
-            <div class="text-center bold">${data.company.name}</div>
-            <div class="text-center">CNPJ: ${data.company.cnpj}</div>
-            <div class="text-center">${data.company.address}</div>
+            <div class="text-center bold">MERCADO EXEMPLO LTDA</div>
+            <div class="text-center">CNPJ: 12.345.678/0001-90</div>
             
             <div class="divider"></div>
             
             <div class="text-center bold">CUPOM FISCAL ELETRÔNICO</div>
-            <div class="text-center">CCF: ${data.sale.ccf} COO: ${data.sale.coo}</div>
-            <div class="text-center">PDV: ${data.sale.pdvId}</div>
-            
-            <div class="divider"></div>
-            
-            <div class="text-center">CONSUMIDOR NÃO IDENTIFICADO</div>
+            <div class="text-center">CCF: ${sale.ccf} COO: ${sale.coo}</div>
             
             <div class="divider"></div>
             
             <table>
-              <tr>
-                <td colspan="4" class="bold">ITEM CÓDIGO DESCRIÇÃO</td>
-              </tr>
-              <tr>
-                <td class="bold">QTD</td>
-                <td class="bold">UN</td>
-                <td class="bold text-right">VL UNIT</td>
-                <td class="bold text-right">VL TOTAL</td>
-              </tr>
-              ${data.sale.items.map((item: any, index: number) => `
+              ${items.map((item, index) => `
                 <tr>
-                  <td colspan="4">${(index + 1).toString().padStart(3, "0")} ${item.productId} ${item.productName}</td>
+                  <td colspan="4">${(index + 1).toString().padStart(3, "0")} ${item.id} ${item.name}</td>
                 </tr>
                 <tr>
-                  <td>${item.quantity}</td>
-                  <td>UN</td>
-                  <td class="text-right">${(item.unitPrice / 100).toFixed(2)}</td>
-                  <td class="text-right">${(item.total / 100).toFixed(2)}</td>
+                  <td>${item.quantity} UN</td>
+                  <td class="text-right">${(item.price / 100).toFixed(2)}</td>
+                  <td class="text-right">${(item.price * item.quantity / 100).toFixed(2)}</td>
                 </tr>
               `).join("")}
             </table>
             
             <div class="divider"></div>
             
-            ${data.sale.discount > 0 ? `
-              <div class="text-right">SUBTOTAL R$ ${(data.sale.subtotal / 100).toFixed(2)}</div>
-              <div class="text-right">DESCONTO R$ -${(data.sale.discount / 100).toFixed(2)}</div>
-            ` : ''}
-            
-            <div class="text-right bold" style="font-size: 14px">TOTAL R$ ${(data.sale.total / 100).toFixed(2)}</div>
+            <div class="text-right">SUBTOTAL R$ ${(subtotal / 100).toFixed(2)}</div>
+            ${discount > 0 ? `<div class="text-right">DESCONTO R$ -${(discount / 100).toFixed(2)}</div>` : ''}
+            <div class="text-right bold">TOTAL R$ ${(total / 100).toFixed(2)}</div>
             
             <div class="divider"></div>
             
-            <div class="text-right">
-              ${data.sale.paymentMethod} R$ ${(data.sale.paidAmount || data.sale.total / 100).toFixed(2)}
-            </div>
+            ${payments.map(p => `
+              <div class="text-right">
+                ${p.method} R$ ${(p.amount / 100).toFixed(2)}
+              </div>
+            `).join("")}
             
-            <div class="text-right">
-              TROCO R$ ${((data.sale.change || 0) / 100).toFixed(2)}
-            </div>
+            <div class="text-right">TROCO R$ ${(change / 100).toFixed(2)}</div>
             
             <div class="divider"></div>
-            
-            <div class="text-center">${data.sale.date}</div>
-            <div class="text-center">Operador: ${data.sale.operatorName}</div>
-            
-            <div class="text-center" style="margin-top: 20px;">OBRIGADO PELA PREFERÊNCIA!</div>
-            <div class="text-center" style="font-size: 10px; margin-top: 10px;">Sistema PDV - Versão 1.0</div>
-            
-            <script>
-              // window.print();
-            </script>
+            <div class="text-center">OBRIGADO PELA PREFERÊNCIA!</div>
           </body>
         </html>
       `;
-
       printWindow.document.write(html);
       printWindow.document.close();
     }
@@ -232,82 +284,138 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
-        <h2>Finalizar Venda</h2>
+      <div className="modal-content" style={{ maxWidth: '800px', width: '90%', display: 'flex', gap: '20px' }}>
+        
+        {/* Left Side: Payment Selection */}
+        <div style={{ flex: 1 }}>
+          <h2>Finalizar Venda</h2>
+          
+          <div className="info-card" style={{ marginBottom: '20px', background: 'var(--bg-secondary)', border: 'none' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span>Subtotal</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            {discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: 'var(--error)' }}>
+                <span>Desconto</span>
+                <span>-{formatCurrency(discount)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '24px', fontWeight: 'bold', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
+              <span>Total</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
+          </div>
 
-        <div className="info-card" style={{ marginBottom: '24px', textAlign: 'center', background: 'var(--bg-secondary)', border: 'none' }}>
-          <span className="label" style={{ marginBottom: '4px' }}>Total a Pagar</span>
-          <span className="value total" style={{ fontSize: '36px' }}>{formatCurrency(total)}</span>
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '12px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: 500 }}>Forma de Pagamento</label>
-          <div className="payment-methods" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <button 
-              className={`action-btn ${paymentMethod === "DINHEIRO" ? "primary" : ""}`} 
-              onClick={() => setPaymentMethod("DINHEIRO")}
-              style={{ padding: '12px', alignItems: 'center' }}
-            >
-              <span style={{ fontSize: '20px' }}>💵</span>
-              <span>Dinheiro</span>
-            </button>
-            <button 
-              className={`action-btn ${paymentMethod === "DEBITO" ? "primary" : ""}`} 
-              onClick={() => setPaymentMethod("DEBITO")}
-              style={{ padding: '12px', alignItems: 'center' }}
-            >
-              <span style={{ fontSize: '20px' }}>💳</span>
-              <span>Débito</span>
-            </button>
-            <button 
-              className={`action-btn ${paymentMethod === "CREDITO" ? "primary" : ""}`} 
-              onClick={() => setPaymentMethod("CREDITO")}
-              style={{ padding: '12px', alignItems: 'center' }}
-            >
-              <span style={{ fontSize: '20px' }}>💳</span>
-              <span>Crédito</span>
-            </button>
-            <button 
-              className={`action-btn ${paymentMethod === "PIX" ? "primary" : ""}`} 
-              onClick={() => setPaymentMethod("PIX")}
-              style={{ padding: '12px', alignItems: 'center' }}
-            >
-              <span style={{ fontSize: '20px' }}>📱</span>
-              <span>PIX</span>
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {PAYMENT_METHODS.map((method, index) => (
+              <button
+                key={method.id}
+                ref={el => methodRefs.current[index] = el}
+                className={`action-btn ${selectedMethodIndex === index ? 'primary' : ''}`}
+                onClick={() => {
+                  setSelectedMethodIndex(index);
+                  setIsInputFocused(true);
+                }}
+                style={{ 
+                  justifyContent: 'flex-start', 
+                  padding: '15px',
+                  border: selectedMethodIndex === index ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)'
+                }}
+              >
+                <span style={{ fontSize: '24px', marginRight: '10px' }}>{method.icon}</span>
+                <span style={{ fontSize: '18px' }}>{method.label}</span>
+                {selectedMethodIndex === index && (
+                  <span style={{ marginLeft: 'auto', fontSize: '12px' }}>⏎ Selecionar</span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
-        {paymentMethod === "DINHEIRO" && (
-          <div className="cash-payment" style={{ marginBottom: '24px', background: 'var(--bg-secondary)', padding: '16px', borderRadius: 'var(--border-radius)' }}>
-            <div className="form-group" style={{ marginBottom: '0' }}>
-              <label>Valor Recebido</label>
-              <input 
-                type="number" 
-                step="0.01" 
-                value={paidAmount} 
-                onChange={(e) => setPaidAmount(e.target.value)} 
-                placeholder="0,00" 
-                autoFocus 
-                style={{ fontSize: '24px', fontWeight: 600, textAlign: 'center', letterSpacing: '2px', color: 'var(--accent-primary)' }}
-              />
+        {/* Right Side: Input & Summary */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '10px', color: 'var(--text-secondary)' }}>
+              Valor a Pagar ({PAYMENT_METHODS[selectedMethodIndex].label})
+            </label>
+            <input
+              ref={inputRef}
+              type="number"
+              value={amountInput}
+              onChange={(e) => setAmountInput(e.target.value)}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+              placeholder="0,00"
+              style={{ 
+                width: '100%', 
+                fontSize: '32px', 
+                padding: '10px', 
+                textAlign: 'right',
+                border: isInputFocused ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                borderRadius: '4px'
+              }}
+            />
+            <div style={{ textAlign: 'right', marginTop: '5px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Pressione ENTER para adicionar
             </div>
-            {paidAmount && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Troco:</span>
-                <span style={{ fontSize: '20px', fontWeight: 600, color: 'var(--success)' }}>{formatCurrency(calculateChange())}</span>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '16px', marginBottom: '10px' }}>Pagamentos Adicionados</h3>
+            {payments.length === 0 ? (
+              <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Nenhum pagamento adicionado</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {payments.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                    <span>{PAYMENT_METHODS.find(m => m.id === p.method)?.label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontWeight: 'bold' }}>{formatCurrency(p.amount)}</span>
+                      <button 
+                        onClick={() => handleRemovePayment(i)}
+                        style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        )}
 
-        <div className="modal-actions" style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-          <button onClick={onClose} disabled={loading} className="btn-logout" style={{ flex: 1, justifyContent: 'center' }}>
-            Cancelar
-          </button>
-          <button onClick={handlePayment} disabled={loading} className="btn-primary" style={{ flex: 2 }}>
-            {loading ? "Processando..." : "Confirmar Pagamento"}
-          </button>
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '18px' }}>
+              <span>Total Pago:</span>
+              <span style={{ color: 'var(--success)' }}>{formatCurrency(totalPaid)}</span>
+            </div>
+            {remaining > 0 ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '20px', fontWeight: 'bold' }}>
+                <span>Restante:</span>
+                <span style={{ color: 'var(--error)' }}>{formatCurrency(remaining)}</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '20px', fontWeight: 'bold' }}>
+                <span>Troco:</span>
+                <span style={{ color: 'var(--accent-primary)' }}>{formatCurrency(change)}</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={onClose} className="btn-logout" style={{ flex: 1 }}>
+                Cancelar (ESC)
+              </button>
+              <button 
+                onClick={handleFinalize} 
+                disabled={remaining > 0 || loading} 
+                className="btn-primary" 
+                style={{ flex: 2, opacity: remaining > 0 ? 0.5 : 1 }}
+              >
+                {loading ? "Processando..." : "Finalizar (F12/Enter)"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

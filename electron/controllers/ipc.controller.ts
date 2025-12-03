@@ -102,7 +102,7 @@ export function registerIpcHandlers() {
         operatorName: orderData.operatorName,
         pdvId: orderData.pdvId,
         items: orderData.items,
-        paymentMethod: orderData.paymentMethod,
+        payments: orderData.payments || [{ method: orderData.paymentMethod, amount: orderData.total }], // Fallback for backward compatibility
         discount: orderData.discount,
       });
     } catch (error: any) {
@@ -118,7 +118,7 @@ export function registerIpcHandlers() {
         operatorName: saleData.operatorName,
         pdvId: saleData.pdvId,
         items: saleData.items,
-        paymentMethod: "CANCELADO",
+        payments: [], // No payments for cancellation
         discount: saleData.discount,
       });
     } catch (error: any) {
