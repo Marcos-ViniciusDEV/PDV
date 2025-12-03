@@ -5,6 +5,7 @@ import {
   saleItems,
   salePayments,
   counters,
+  products,
   type Sale,
   type InsertSale,
   type SaleItem,
@@ -68,9 +69,27 @@ export async function getPendingSales(): Promise<Sale[]> {
 /**
  * Busca itens de uma venda
  */
-export async function getSaleItems(saleId: number): Promise<SaleItem[]> {
+
+/**
+ * Busca itens de uma venda com nome do produto
+ */
+export async function getSaleItems(saleId: number) {
   const db = await getDb();
-  return db.select().from(saleItems).where(eq(saleItems.saleId, saleId));
+  return db
+    .select({
+      id: saleItems.id,
+      saleId: saleItems.saleId,
+      productId: saleItems.productId,
+      quantity: saleItems.quantity,
+      unitPrice: saleItems.unitPrice,
+      total: saleItems.total,
+      discount: saleItems.discount,
+      createdAt: saleItems.createdAt,
+      productName: products.descricao,
+    })
+    .from(saleItems)
+    .leftJoin(products, eq(saleItems.productId, products.id))
+    .where(eq(saleItems.saleId, saleId));
 }
 
 /**
@@ -133,16 +152,18 @@ export async function getNextCounters(): Promise<{ ccf: number; coo: number }> {
   const nextCcf = (ccfCounter?.value || 0) + 1;
   const nextCoo = (cooCounter?.value || 0) + 1;
   
-  // Atualizar contadores
-  await db
-    .update(counters)
-    .set({ value: nextCcf })
-    .where(eq(counters.name, "ccf"));
-  
-  await db
-    .update(counters)
-    .set({ value: nextCoo })
-    .where(eq(counters.name, "coo"));
+  // Atualizar ou Inserir contadores
+  if (ccfCounter) {
+    await db.update(counters).set({ value: nextCcf }).where(eq(counters.name, "ccf"));
+  } else {
+    await db.insert(counters).values({ name: "ccf", value: nextCcf });
+  }
+
+  if (cooCounter) {
+    await db.update(counters).set({ value: nextCoo }).where(eq(counters.name, "coo"));
+  } else {
+    await db.insert(counters).values({ name: "coo", value: nextCoo });
+  }
   
   return { ccf: nextCcf, coo: nextCoo };
 }
@@ -166,5 +187,26 @@ export async function getRecentSales(limit: number = 10): Promise<Sale[]> {
     .from(sales)
     .orderBy(sql`${sales.createdAt} DESC`)
     .limit(limit);
+}
+
+/**
+ * Busca vendas suspensas
+ */
+export async function getSuspendedSales(): Promise<Sale[]> {
+  const db = await getDb();
+  return db
+    .select()
+    .from(sales)
+    .where(eq(sales.status, "suspended"))
+    .orderBy(sql`${sales.createdAt} DESC`);
+}
+
+/**
+ * Exclui uma venda (usado para recuperar venda suspensa)
+ */
+export async function deleteSale(uuid: string): Promise<void> {
+  const db = await getDb();
+  await db.delete(sales).where(eq(sales.uuid, uuid));
+  console.log(`[Sales Repository] Deleted sale ${uuid}`);
 }
 

@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld('electron', {
     cancelSale: (saleData: any) => ipcRenderer.invoke('cancel-sale', saleData),
     getPendingOrders: () => ipcRenderer.invoke('get-pending-orders'),
     getRecentSales: (limit?: number) => ipcRenderer.invoke('get-recent-sales', limit),
+    getSaleItems: (saleId: number) => ipcRenderer.invoke('get-sale-items', saleId),
+    suspendSale: (saleData: any) => ipcRenderer.invoke('suspend-sale', saleData),
+    getSuspendedSales: () => ipcRenderer.invoke('get-suspended-sales'),
+    deleteSuspendedSale: (uuid: string) => ipcRenderer.invoke('delete-suspended-sale', uuid),
     
     // Cash
     saveCashMovement: (movement: any) => ipcRenderer.invoke('save-cash-movement', movement),
@@ -36,6 +40,11 @@ contextBridge.exposeInMainWorld('electron', {
     getCaixaStatus: (operatorId: number) => ipcRenderer.invoke('caixa:status', { operatorId }),
     getCaixaTotals: (sessionId: number) => ipcRenderer.invoke('caixa:totals', { sessionId }),
     getDailyZReport: () => ipcRenderer.invoke('caixa:daily-totals'),
+    
+    // Offers
+    createOffer: (offer: any) => ipcRenderer.invoke('create-offer', offer),
+    getOffers: () => ipcRenderer.invoke('get-offers'),
+    deleteOffer: (id: number) => ipcRenderer.invoke('delete-offer', id),
     
     // Catalog events
     onCatalogUpdated: (callback: () => void) => {
@@ -70,6 +79,10 @@ declare global {
         cancelSale: (saleData: any) => Promise<{ uuid: string; ccf: string; coo: string; status: string }>;
         getPendingOrders: () => Promise<any[]>;
         getRecentSales: (limit?: number) => Promise<any[]>;
+        getSaleItems: (saleId: number) => Promise<any[]>;
+        suspendSale: (saleData: any) => Promise<{ uuid: string; numeroVenda: string; status: string }>;
+        getSuspendedSales: () => Promise<any[]>;
+        deleteSuspendedSale: (uuid: string) => Promise<void>;
         saveCashMovement: (movement: any) => Promise<void>;
         getCashBalance: () => Promise<number>;
         getPendingMovements: () => Promise<any[]>;
@@ -82,6 +95,9 @@ declare global {
         getCaixaStatus: (operatorId: number) => Promise<{ isOpen: boolean; session?: any; error?: string }>;
         getCaixaTotals: (sessionId: number) => Promise<{ success: boolean; totals?: any; error?: string }>;
         getDailyZReport: () => Promise<{ success: boolean; zReportHtml?: string; error?: string }>;
+        
+        // Offers
+        getOffers: () => Promise<any[]>;
         
         onCatalogUpdated: (callback: () => void) => () => void;
       };

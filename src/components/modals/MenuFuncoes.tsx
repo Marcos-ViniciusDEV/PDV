@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// import { useAuthStore } from '../../stores/authStore'; // Removed unused import
+
+// ... (existing imports)
 
 interface MenuFuncoesProps {
   isOpen: boolean;
@@ -11,7 +12,6 @@ export default function MenuFuncoes({ isOpen, onClose, onSelect }: MenuFuncoesPr
   const [password, setPassword] = useState('');
   const [step, setStep] = useState<'PASSWORD' | 'MENU'>('PASSWORD');
   const [error, setError] = useState('');
-  // const { user } = useAuthStore(); // Removed unused variable
 
   useEffect(() => {
     if (isOpen) {

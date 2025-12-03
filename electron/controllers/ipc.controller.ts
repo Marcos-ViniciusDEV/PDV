@@ -4,6 +4,7 @@ import * as catalogService from "../services/catalog.service";
 import * as salesService from "../services/sales.service";
 import * as cashService from "../services/cash.service";
 import * as syncService from "../services/sync.service";
+import * as offersService from "../services/offers.service";
 
 /**
  * Controllers para IPC do Electron
@@ -144,6 +145,49 @@ export function registerIpcHandlers() {
       throw error;
     }
   });
+
+  ipcMain.handle("get-sale-items", async (_, saleId: number) => {
+    try {
+      return await salesService.getSaleItems(saleId);
+    } catch (error: any) {
+      console.error("[Controller] get-sale-items error:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("suspend-sale", async (_, saleData: any) => {
+    try {
+      return await salesService.suspendSale({
+        operatorId: saleData.operatorId,
+        operatorName: saleData.operatorName,
+        pdvId: saleData.pdvId,
+        items: saleData.items,
+        payments: [],
+        discount: saleData.discount,
+      });
+    } catch (error: any) {
+      console.error("[Controller] suspend-sale error:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("get-suspended-sales", async () => {
+    try {
+      return await salesService.getSuspendedSales();
+    } catch (error: any) {
+      console.error("[Controller] get-suspended-sales error:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("delete-suspended-sale", async (_, uuid: string) => {
+    try {
+      return await salesService.deleteSuspendedSale(uuid);
+    } catch (error: any) {
+      console.error("[Controller] delete-suspended-sale error:", error);
+      throw error;
+    }
+  });
   
   
   // ========== CASH ==========
@@ -179,7 +223,7 @@ export function registerIpcHandlers() {
       throw error;
     }
   });
-  
+
   // ========== SYNC ==========
   ipcMain.handle("load-catalog", async () => {
     try {
@@ -208,5 +252,15 @@ export function registerIpcHandlers() {
     }
   });
   
+  // ========== OFFERS ==========
+  ipcMain.handle("get-offers", async () => {
+    try {
+      return await offersService.getAllOffers();
+    } catch (error: any) {
+      console.error("[Controller] get-offers error:", error);
+      throw error;
+    }
+  });
+
   console.log("[Controllers] ✅ IPC handlers registered");
 }

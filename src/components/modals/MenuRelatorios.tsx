@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ModalRelatorioX from './ModalRelatorioX';
 
 interface MenuRelatoriosProps {
   isOpen: boolean;
   onClose: () => void;
+  sessionId?: number | null;
 }
 
-export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps) {
+export default function MenuRelatorios({ isOpen, onClose, sessionId }: MenuRelatoriosProps) {
   const [password, setPassword] = useState('');
   const [step, setStep] = useState<'PASSWORD' | 'MENU'>('PASSWORD');
   const [error, setError] = useState('');
+  const [showRelatorioX, setShowRelatorioX] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,6 +20,7 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
       setStep('PASSWORD');
       setPassword('');
       setError('');
+      setShowRelatorioX(false);
     }
   }, [isOpen]);
 
@@ -39,7 +43,7 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
     }
   };
 
-  const handleOption = async (option: 'Z_REPORT' | 'CLOSE_REGISTER') => {
+  const handleOption = async (option: 'Z_REPORT' | 'CLOSE_REGISTER' | 'X_REPORT') => {
     if (option === 'CLOSE_REGISTER') {
       navigate('/fechamento-caixa');
       onClose();
@@ -56,6 +60,12 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
         console.error('Error generating Z report:', err);
         alert('Erro ao gerar Redução Z');
       }
+    } else if (option === 'X_REPORT') {
+      if (!sessionId) {
+        alert('Sessão não identificada');
+        return;
+      }
+      setShowRelatorioX(true);
     }
   };
 
@@ -73,9 +83,22 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
     }
   };
 
+  if (showRelatorioX && sessionId) {
+    return (
+      <ModalRelatorioX 
+        sessionId={sessionId} 
+        onClose={() => {
+          setShowRelatorioX(false);
+          // onClose(); // Keep menu open or close it? Let's keep menu open or just close modal.
+          // Usually X report is quick check. Let's just close modal and return to menu.
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: step === 'PASSWORD' ? '350px' : '500px' }}>
+      <div className="modal-content" style={{ maxWidth: step === 'PASSWORD' ? '350px' : '600px' }}>
         <h2>{step === 'PASSWORD' ? 'Acesso Restrito' : 'O que deseja fazer?'}</h2>
 
         {step === 'PASSWORD' ? (
@@ -125,7 +148,31 @@ export default function MenuRelatorios({ isOpen, onClose }: MenuRelatoriosProps)
           </>
         ) : (
           <div className="util-options" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <button
+                onClick={() => handleOption('X_REPORT')}
+                className="menu-item"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  gap: '12px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span style={{ fontSize: '32px' }}>📊</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontWeight: 600, fontSize: '15px', color: 'white' }}>Relatório X</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Parcial Sessão</span>
+                </div>
+              </button>
+
               <button
                 onClick={() => handleOption('CLOSE_REGISTER')}
                 className="menu-item"

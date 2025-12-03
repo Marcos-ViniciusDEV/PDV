@@ -151,6 +151,10 @@ export async function getRecentSales(limit: number = 10) {
  * Cancela uma venda (cupom)
  * Cria o registro da venda com status 'cancelled'
  */
+/**
+ * Cancela uma venda (cupom)
+ * Cria o registro da venda com status 'cancelled'
+ */
 export async function cancelSale(input: CreateSaleInput) {
   console.log("[Sales Service] Cancelling sale...");
   
@@ -212,5 +216,80 @@ export async function cancelSale(input: CreateSaleInput) {
     coo: sale.coo,
     status: sale.status,
   };
+}
+
+/**
+ * Suspende uma venda (Pré-venda)
+ */
+export async function suspendSale(input: CreateSaleInput) {
+  console.log("[Sales Service] Suspending sale...");
+  
+  const uuid = uuidv4();
+  
+  // Calcular totais
+  const itemsTotal = input.items.reduce((sum, item) => {
+    const itemTotal = item.quantity * item.unitPrice;
+    const itemDiscount = item.discount || 0;
+    return sum + (itemTotal - itemDiscount);
+  }, 0);
+  
+  const discount = input.discount || 0;
+  const netTotal = itemsTotal - discount;
+  
+  // Gerar identificador temporário
+  const timestamp = Date.now();
+  const numeroVenda = `SUSP-${timestamp}`;
+  
+  // Preparar dados da venda
+  const saleData: InsertSale = {
+    uuid,
+    numeroVenda,
+    ccf: "000000", // Dummy
+    coo: "000000", // Dummy
+    pdvId: input.pdvId,
+    operatorId: input.operatorId,
+    operatorName: input.operatorName,
+    total: itemsTotal,
+    discount,
+    netTotal,
+    paymentMethod: "SUSPENSO",
+    couponType: "NFC-e",
+    syncStatus: "pending",
+    status: "suspended",
+  };
+  
+  // Preparar itens
+  const items: Omit<InsertSaleItem, "saleId">[] = input.items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    total: item.quantity * item.unitPrice,
+    discount: item.discount || 0,
+  }));
+  
+  // Criar venda
+  const sale = await salesRepository.createSale(saleData, items);
+  
+  console.log(`[Sales Service] ⏸ Sale suspended: ${sale.numeroVenda} (${sale.uuid})`);
+  
+  return {
+    uuid: sale.uuid,
+    numeroVenda: sale.numeroVenda,
+    status: sale.status,
+  };
+}
+
+/**
+ * Busca vendas suspensas
+ */
+export async function getSuspendedSales() {
+  return salesRepository.getSuspendedSales();
+}
+
+/**
+ * Exclui uma venda suspensa (ao recuperar)
+ */
+export async function deleteSuspendedSale(uuid: string) {
+  return salesRepository.deleteSale(uuid);
 }
 

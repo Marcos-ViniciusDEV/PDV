@@ -14,6 +14,7 @@ import MenuRelatorios from '../components/modals/MenuRelatorios';
 import MenuFuncoes from '../components/modals/MenuFuncoes';
 import SangriaModal from '../components/modals/SangriaModal';
 import ModalConsultarPreco from '../components/modals/ModalConsultarPreco';
+import ModalRecuperarVenda from '../components/modals/ModalRecuperarVenda';
 
 export default function PDV() {
   const { user, logout } = useAuthStore();
@@ -23,6 +24,7 @@ export default function PDV() {
   const [sessionId, setSessionId] = useState<number | null>(null);
   
   const [showPayment, setShowPayment] = useState(false);
+  const [showRecoverSale, setShowRecoverSale] = useState(false);
   const [showMenuRelatorios, setShowMenuRelatorios] = useState(false);
   const [showMenuFuncoes, setShowMenuFuncoes] = useState(false);
   const [showSangriaModal, setShowSangriaModal] = useState(false);
@@ -36,6 +38,43 @@ export default function PDV() {
   const [showAuthCancel, setShowAuthCancel] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
   const buscaProdutoRef = useRef<BuscaProdutoRef>(null);
+
+  const handleSuspendSale = async () => {
+    const total = useVendaStore.getState().getTotal();
+    if (total === 0) {
+      alert('Não há itens para suspender');
+      return;
+    }
+
+    if (!window.confirm('Deseja suspender a venda atual?')) {
+      return;
+    }
+
+    try {
+      const { items, discount } = useVendaStore.getState();
+      await window.electron.db.suspendSale({
+        operatorId: user?.id,
+        operatorName: user?.name,
+        pdvId: "PDV001",
+        items: items.map(item => ({
+          productId: item.id,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          discount: 0
+        })),
+        discount
+      });
+      useVendaStore.getState().clear();
+      alert('Venda suspensa com sucesso!');
+    } catch (error) {
+      console.error('Erro ao suspender venda:', error);
+      alert('Erro ao suspender venda');
+    }
+  };
+
+  const handleRecoverSale = () => {
+    setShowRecoverSale(true);
+  };
 
   // Check session on mount
   useEffect(() => {
@@ -212,12 +251,25 @@ export default function PDV() {
         setShowDiscountOptions(false);
         setShowAuthCancel(false);
         setShowPriceCheck(false);
+        setShowRecoverSale(false);
       }
       
       // F3 - Consultar Preço
       if (e.key === 'F3') {
         e.preventDefault();
         setShowPriceCheck(true);
+      }
+
+      // F4 - Suspender Venda
+      if (e.key === 'F4') {
+        e.preventDefault();
+        handleSuspendSale();
+      }
+
+      // F8 - Recuperar Venda
+      if (e.key === 'F8') {
+        e.preventDefault();
+        handleRecoverSale();
       }
     };
 
@@ -360,6 +412,14 @@ export default function PDV() {
                 <span>F</span>
                 <span>Funções Caixa</span>
               </button>
+              <button className="action-btn" onClick={handleSuspendSale}>
+                <span>F4</span>
+                <span>Suspender Venda</span>
+              </button>
+              <button className="action-btn" onClick={handleRecoverSale}>
+                <span>F8</span>
+                <span>Recuperar Venda</span>
+              </button>
             </div>
           </div>
 
@@ -398,6 +458,7 @@ export default function PDV() {
         <MenuRelatorios
           isOpen={showMenuRelatorios}
           onClose={() => setShowMenuRelatorios(false)}
+          sessionId={sessionId}
         />
       )}
 
@@ -473,6 +534,13 @@ export default function PDV() {
       {showPriceCheck && (
         <ModalConsultarPreco
           onClose={() => setShowPriceCheck(false)}
+        />
+      )}
+
+      {showRecoverSale && (
+        <ModalRecuperarVenda
+          onClose={() => setShowRecoverSale(false)}
+          onSuccess={() => setShowRecoverSale(false)}
         />
       )}
     </div>

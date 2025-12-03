@@ -66,23 +66,69 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
   console.log("[Catalog Service] ✅ Catalog loaded successfully");
 }
 
+import * as offersService from "./offers.service";
+
+// ... (existing code)
+
+/**
+ * Aplica ofertas aos produtos
+ */
+async function applyOffers(product: any) {
+  if (!product) return null;
+  
+  const activeOffers = await offersService.getActiveOffers();
+  const offer = activeOffers.find(o => o.productId === product.id);
+  
+  if (offer) {
+    return {
+      ...product,
+      originalPrice: product.precoVenda,
+      precoVenda: offer.precoOferta,
+      hasOffer: true,
+      offerId: offer.id
+    };
+  }
+  
+  return {
+    ...product,
+    hasOffer: false
+  };
+}
+
 /**
  * Busca todos os produtos
  */
 export async function getAllProducts() {
-  return productsRepository.getAllProducts();
+  const products = await productsRepository.getAllProducts();
+  const activeOffers = await offersService.getActiveOffers();
+  
+  return products.map(p => {
+    const offer = activeOffers.find(o => o.productId === p.id);
+    if (offer) {
+      return {
+        ...p,
+        originalPrice: p.precoVenda,
+        precoVenda: offer.precoOferta,
+        hasOffer: true,
+        offerId: offer.id
+      };
+    }
+    return { ...p, hasOffer: false };
+  });
 }
 
 /**
  * Busca produto por código de barras
  */
 export async function getProductByBarcode(barcode: string) {
-  return productsRepository.getProductByBarcode(barcode);
+  const product = await productsRepository.getProductByBarcode(barcode);
+  return applyOffers(product);
 }
 
 /**
  * Busca produto por código
  */
 export async function getProductByCode(codigo: string) {
-  return productsRepository.getProductByCode(codigo);
+  const product = await productsRepository.getProductByCode(codigo);
+  return applyOffers(product);
 }

@@ -63,7 +63,7 @@ export async function upsertUsers(userList: InsertUser[]): Promise<void> {
           name: user.name,
           email: user.email,
           role: user.role,
-          // passwordHash mantém o valor local existente
+          passwordHash: user.passwordHash, // Atualizar senha também
         })
         .where(eq(users.id, user.id!));
     } else {
