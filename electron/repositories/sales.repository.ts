@@ -85,10 +85,8 @@ export async function getSaleItems(saleId: number) {
       total: saleItems.total,
       discount: saleItems.discount,
       createdAt: saleItems.createdAt,
-      productName: products.descricao,
     })
     .from(saleItems)
-    .leftJoin(products, eq(saleItems.productId, products.id))
     .where(eq(saleItems.saleId, saleId));
 }
 

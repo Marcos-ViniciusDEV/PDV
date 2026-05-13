@@ -17,7 +17,7 @@ let syncInterval: NodeJS.Timeout | null = null;
 let checkInterval: NodeJS.Timeout | null = null;
 
 const PDV_ID = process.env.VITE_PDV_ID || "PDV001";
-const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
+const SYNC_INTERVAL_MS = 30 * 1000; // 30 segundos
 const CHECK_INTERVAL_MS = 30 * 1000; // 30 segundos
 
 /**
@@ -161,14 +161,13 @@ export async function syncPendingData() {
     // Enviar para API
     const result = await apiClient.syncBatch({ vendas, movimentosCaixa });
     
-    // Marcar como sincronizado
+    // Marcar como sincronizado SOMENTE se o backend confirmou
     if (vendas.length > 0) {
       const uuids = vendas.map((v) => v.uuid);
       await salesService.markSalesAsSynced(uuids);
     }
     
-    
-    // Marcar todos os movimentos pendentes como sincronizados (VENDA é local-only)
+    // Marcar todos os movimentos como sincronizados
     if (pendingMovements.length > 0) {
       const uuids = pendingMovements.map((m) => m.uuid);
       await cashService.markMovementsAsSynced(uuids);
