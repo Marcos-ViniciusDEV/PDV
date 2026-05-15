@@ -10,6 +10,24 @@ import {
 } from "drizzle-orm/mysql-core";
 
 /**
+ * Configurações Locais e Vínculo com a Nuvem (SaaS Multi-Tenant)
+ */
+export const configuracoes = mysqlTable("configuracoes", {
+  id: int("id").autoincrement().primaryKey(),
+  empresaId: int("empresaId").notNull(),
+  empresaNome: varchar("empresaNome", { length: 255 }).notNull(),
+  pdvId: varchar("pdvId", { length: 50 }).notNull(),
+  tokenAutenticacao: text("tokenAutenticacao").notNull(),
+  urlBackend: varchar("urlBackend", { length: 255 }).notNull(),
+  ultimaSincronizacao: timestamp("ultimaSincronizacao"),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Configuracao = typeof configuracoes.$inferSelect;
+export type InsertConfiguracao = typeof configuracoes.$inferInsert;
+
+
+/**
  * Produtos sincronizados da API Central
  */
 export const products = mysqlTable("products", {

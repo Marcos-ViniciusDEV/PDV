@@ -15,8 +15,19 @@ export default function InitialLoad() {
 
   const loadCatalog = async () => {
     try {
-      setStatus('Conectando ao servidor...');
+      setStatus('Verificando ativação do terminal...');
       setProgress(10);
+
+      const config = await window.electron.sync.getConfig();
+      if (!config) {
+        // Terminal não está ativado, redirecionar para tela de ativação
+        setStatus('Terminal não ativado. Redirecionando...');
+        setTimeout(() => navigate('/ativacao'), 1000);
+        return;
+      }
+
+      setStatus('Conectando ao servidor...');
+      setProgress(30);
 
       // Tentar sincronizar com o servidor
       const success = await window.electron.sync.loadCatalog();

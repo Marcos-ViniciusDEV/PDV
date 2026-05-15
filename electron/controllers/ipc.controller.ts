@@ -5,6 +5,7 @@ import * as salesService from "../services/sales.service";
 import * as cashService from "../services/cash.service";
 import * as syncService from "../services/sync.service";
 import * as offersService from "../services/offers.service";
+import * as configService from "../services/config.service";
 
 /**
  * Controllers para IPC do Electron
@@ -258,6 +259,25 @@ export function registerIpcHandlers() {
       return await offersService.getAllOffers();
     } catch (error: any) {
       console.error("[Controller] get-offers error:", error);
+      throw error;
+    }
+  });
+
+  // ========== CONFIG / TENANT ==========
+  ipcMain.handle("get-config", async () => {
+    try {
+      return await configService.getConfig();
+    } catch (error: any) {
+      console.error("[Controller] get-config error:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle("save-config", async (_, configData: any) => {
+    try {
+      return await configService.saveConfig(configData);
+    } catch (error: any) {
+      console.error("[Controller] save-config error:", error);
       throw error;
     }
   });

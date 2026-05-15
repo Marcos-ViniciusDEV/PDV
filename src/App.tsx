@@ -4,6 +4,7 @@ import PDV from './pages/PDV';
 import InitialLoad from './pages/InitialLoad';
 import AberturaCaixa from './pages/AberturaCaixa';
 import FechamentoCaixa from './pages/FechamentoCaixa';
+import Ativacao from './pages/Ativacao';
 import { useAuthStore } from './stores/authStore';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<InitialLoad />} />
+        <Route path="/ativacao" element={<Ativacao />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/pdv"
