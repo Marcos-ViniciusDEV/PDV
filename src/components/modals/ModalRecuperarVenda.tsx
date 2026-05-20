@@ -43,7 +43,7 @@ export default function ModalRecuperarVenda({ onClose, onSuccess }: ModalRecuper
           id: item.productId,
           name: item.productName || `Produto ${item.productId}`,
           price: item.unitPrice,
-          barcode: "", // Dummy barcode
+          barcode: item.barcode || "",
           quantity: item.quantity,
         } as any);
       });
@@ -77,6 +77,7 @@ export default function ModalRecuperarVenda({ onClose, onSuccess }: ModalRecuper
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                  <th style={{ padding: '10px' }}>Identificação/Número</th>
                   <th style={{ padding: '10px' }}>Data/Hora</th>
                   <th style={{ padding: '10px' }}>Operador</th>
                   <th style={{ padding: '10px', textAlign: 'right' }}>Total</th>
@@ -86,6 +87,7 @@ export default function ModalRecuperarVenda({ onClose, onSuccess }: ModalRecuper
               <tbody>
                 {sales.map((sale) => (
                   <tr key={sale.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <td style={{ padding: '10px', fontWeight: 'bold' }}>{sale.numeroVenda}</td>
                     <td style={{ padding: '10px' }}>{new Date(sale.createdAt).toLocaleString()}</td>
                     <td style={{ padding: '10px' }}>{sale.operatorName}</td>
                     <td style={{ padding: '10px', textAlign: 'right' }}>

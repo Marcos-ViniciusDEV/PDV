@@ -23,7 +23,7 @@ interface VendaState {
   getTotal: () => number;
   getDiscount: () => number;
   getNetTotal: () => number;
-  cancelSale: (operatorId: number, operatorName: string) => Promise<void>;
+  cancelSale: (operatorId: number, operatorName: string) => Promise<any>;
 }
 
 export const useVendaStore = create<VendaState>()(
@@ -87,10 +87,10 @@ export const useVendaStore = create<VendaState>()(
       cancelSale: async (operatorId, operatorName) => {
         const { items, discount } = get();
         
-        if (items.length === 0) return;
+        if (items.length === 0) return null;
 
         try {
-          await window.electron.db.cancelSale({
+          const result = await window.electron.db.cancelSale({
             operatorId,
             operatorName,
             pdvId: 'PDV-01', // TODO: Pegar do config
@@ -104,6 +104,7 @@ export const useVendaStore = create<VendaState>()(
           });
           
           get().clear();
+          return result;
         } catch (error) {
           console.error('Erro ao cancelar venda:', error);
           throw error;

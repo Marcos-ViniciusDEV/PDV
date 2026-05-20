@@ -5,6 +5,7 @@ import {
   saleItems,
   salePayments,
   counters,
+  products,
   type Sale,
   type InsertSale,
   type InsertSaleItem,
@@ -78,6 +79,8 @@ export async function getSaleItems(saleId: number) {
       id: saleItems.id,
       saleId: saleItems.saleId,
       productId: saleItems.productId,
+      productName: products.descricao,
+      barcode: products.codigoBarras,
       quantity: saleItems.quantity,
       unitPrice: saleItems.unitPrice,
       total: saleItems.total,
@@ -85,6 +88,7 @@ export async function getSaleItems(saleId: number) {
       createdAt: saleItems.createdAt,
     })
     .from(saleItems)
+    .leftJoin(products, eq(saleItems.productId, products.id))
     .where(eq(saleItems.saleId, saleId));
 }
 

@@ -152,11 +152,91 @@ export default function PDV() {
     setShowAuthCancel(true);
   };
 
+  const printCancellationCoupon = (sale: any, items: any[], discount: number) => {
+    const width = 400;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
+    const printWindow = window.open("", "_blank", `width=${width},height=${height},top=${top},left=${left}`);
+
+    if (printWindow) {
+      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const total = Math.max(0, subtotal - discount);
+      
+      const html = `
+        <html>
+          <head>
+            <title>Cupom de Cancelamento</title>
+            <style>
+              body { font-family: 'Courier New', monospace; font-size: 12px; margin: 0; padding: 10px; }
+              .text-center { text-align: center; }
+              .text-right { text-align: right; }
+              .bold { font-weight: bold; }
+              .divider { border-top: 1px dashed #000; margin: 5px 0; }
+              table { width: 100%; border-collapse: collapse; }
+              td { vertical-align: top; padding: 2px 0; }
+              .cancelled-header { font-size: 14px; color: red; border: 2px solid red; padding: 5px; margin: 10px 0; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <div class="text-center bold">MERCADO EXEMPLO LTDA</div>
+            <div class="text-center">CNPJ: 12.345.678/0001-90</div>
+            
+            <div class="divider"></div>
+            
+            <div class="text-center bold">HOMOLOGAÇÃO DE CANCELAMENTO</div>
+            <div class="text-center">CCF: ${sale.ccf} COO: ${sale.coo}</div>
+            <div class="text-center">Data: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}</div>
+            
+            <div class="cancelled-header text-center">
+              * CUPOM CANCELADO *
+            </div>
+            
+            <div class="divider"></div>
+            
+            <table>
+              ${items.map((item, index) => `
+                <tr>
+                  <td colspan="4">${(index + 1).toString().padStart(3, "0")} ${item.id} ${item.name}</td>
+                </tr>
+                <tr>
+                  <td>${item.quantity} UN</td>
+                  <td class="text-right">${(item.price / 100).toFixed(2)}</td>
+                  <td class="text-right">${(item.price * item.quantity / 100).toFixed(2)}</td>
+                </tr>
+              `).join("")}
+            </table>
+            
+            <div class="divider"></div>
+            
+            <div class="text-right">SUBTOTAL R$ ${(subtotal / 100).toFixed(2)}</div>
+            ${discount > 0 ? `<div class="text-right">DESCONTO R$ -${(discount / 100).toFixed(2)}</div>` : ''}
+            <div class="text-right bold">TOTAL R$ ${(total / 100).toFixed(2)}</div>
+            
+            <div class="divider"></div>
+            <div class="text-center bold">COMPROVANTE DE CANCELAMENTO</div>
+            <div class="divider"></div>
+          </body>
+        </html>
+      `;
+      printWindow.document.write(html);
+      printWindow.document.close();
+    }
+  };
+
   const handleAuthCancelSuccess = async () => {
     if (window.confirm('Tem certeza que deseja cancelar o cupom atual?')) {
       try {
-        await useVendaStore.getState().cancelSale(user?.id || 0, user?.name || 'Desconhecido');
+        const itemsToCancel = [...items];
+        const discountToCancel = useVendaStore.getState().getDiscount();
+        const result = await useVendaStore.getState().cancelSale(user?.id || 0, user?.name || 'Desconhecido');
         setShowAuthCancel(false);
+        
+        if (result) {
+          printCancellationCoupon(result, itemsToCancel, discountToCancel);
+          alert(`Cupom Cancelado com Sucesso!\nIdentificação (Número do Cupom): CCF: ${result.ccf} | COO: ${result.coo}\nData: ${new Date().toLocaleDateString('pt-BR')}`);
+        }
       } catch (error) {
         alert('Erro ao cancelar venda');
       }
