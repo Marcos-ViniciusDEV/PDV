@@ -1,5 +1,6 @@
 import axios from "axios";
 import dotenv from "dotenv";
+import { getConfig } from "../services/config.service";
 
 dotenv.config();
 
@@ -8,7 +9,7 @@ dotenv.config();
  * Responsabilidade: Comunicação HTTP (Single Responsibility)
  */
 
-const API_URL = process.env.VITE_API_URL || "http://localhost:3000";
+const DEFAULT_API_URL = process.env.VITE_API_URL || "http://localhost:3000";
 const TIMEOUT = 30000; // 30 segundos
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 segundo
@@ -24,14 +25,23 @@ function delay(ms: number): Promise<void> {
  * Busca catálogo inicial (produtos e usuários)
  */
 export async function fetchCatalog() {
-  console.log("[API Client] Fetching catalog from:", `${API_URL}/api/pdv/carga-inicial`);
+  const config = await getConfig();
+  const apiUrl = config?.urlBackend || DEFAULT_API_URL;
+  
+  console.log("[API Client] Fetching catalog from:", `${apiUrl}/api/pdv/carga-inicial`);
   
   let lastError: Error | null = null;
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response = await axios.get(`${API_URL}/api/pdv/carga-inicial`, {
+      const headers: Record<string, string> = {};
+      if (config?.tokenAutenticacao) {
+        headers['Authorization'] = `Bearer ${config.tokenAutenticacao}`;
+      }
+
+      const response = await axios.get(`${apiUrl}/api/pdv/carga-inicial`, {
         timeout: TIMEOUT,
+        headers
       });
       
       if (response.data && response.data.success) {
@@ -62,6 +72,9 @@ export async function syncBatch(data: {
   vendas: any[];
   movimentosCaixa: any[];
 }) {
+  const config = await getConfig();
+  const apiUrl = config?.urlBackend || DEFAULT_API_URL;
+  
   console.log("[API Client] Syncing batch:", {
     vendas: data.vendas.length,
     movimentos: data.movimentosCaixa.length,
@@ -71,10 +84,18 @@ export async function syncBatch(data: {
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
+      const headers: Record<string, string> = {};
+      if (config?.tokenAutenticacao) {
+        headers['Authorization'] = `Bearer ${config.tokenAutenticacao}`;
+      }
+
       const response = await axios.post(
-        `${API_URL}/api/pdv/sincronizar`,
+        `${apiUrl}/api/pdv/sincronizar`,
         data,
-        { timeout: TIMEOUT }
+        { 
+          timeout: TIMEOUT,
+          headers
+        }
       );
       
       if (response.data && response.data.success) {
@@ -107,7 +128,10 @@ export async function syncBatch(data: {
  */
 export async function checkHealth(): Promise<boolean> {
   try {
-    await axios.get(`${API_URL}/health`, { timeout: 5000 });
+    const config = await getConfig();
+    const apiUrl = config?.urlBackend || DEFAULT_API_URL;
+    
+    await axios.get(`${apiUrl}/health`, { timeout: 5000 });
     return true;
   } catch (error) {
     return false;
@@ -119,10 +143,20 @@ export async function checkHealth(): Promise<boolean> {
  */
 export async function sendHeartbeat(pdvId: string) {
   try {
+    const config = await getConfig();
+    const apiUrl = config?.urlBackend || DEFAULT_API_URL;
+    const headers: Record<string, string> = {};
+    if (config?.tokenAutenticacao) {
+      headers['Authorization'] = `Bearer ${config.tokenAutenticacao}`;
+    }
+
     await axios.post(
-      `${API_URL}/api/pdv/heartbeat`,
+      `${apiUrl}/api/pdv/heartbeat`,
       { pdvId },
-      { timeout: 5000 }
+      { 
+        timeout: 5000,
+        headers
+      }
     );
     return true;
   } catch (error) {
