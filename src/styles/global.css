@@ -647,3 +647,55 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Caixa Livre Premium UI */
+.caixa-livre-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  animation: fadeIn 0.4s ease-out;
+  padding: 32px;
+}
+
+.caixa-livre-card {
+  background: #f4f4f5; /* Premium Light zinc color matching reference */
+  border-radius: 48px;
+  padding: 64px 80px;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 520px;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.caixa-livre-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 35px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.caixa-livre-title {
+  color: #3b82f6; /* Beautiful dynamic brand blue */
+  font-size: 58px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -2px;
+  line-height: 1.1;
+}
+
+.caixa-livre-time {
+  color: #71717a; /* Muted zinc grey text */
+  font-size: 38px;
+  font-weight: 700;
+  font-family: 'Courier New', Courier, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+}
+
+

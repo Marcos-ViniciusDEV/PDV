@@ -1,7 +1,20 @@
+import { useState, useEffect } from 'react';
 import { useVendaStore } from '../stores/vendaStore';
 
 export default function Carrinho() {
   const { items } = useVendaStore();
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('pt-BR', { hour12: false });
+  };
 
   const formatCurrency = (value: number) => {
     return `R$ ${(value / 100).toFixed(2)}`;
@@ -19,10 +32,11 @@ export default function Carrinho() {
 
       <div className="carrinho-items">
         {items.length === 0 ? (
-          <div className="empty-cart">
-            <div className="empty-cart-icon">🛍️</div>
-            <p>Seu carrinho está vazio</p>
-            <span style={{ fontSize: '13px' }}>Adicione produtos para começar a venda</span>
+          <div className="caixa-livre-container">
+            <div className="caixa-livre-card">
+              <h2 className="caixa-livre-title">Caixa Livre</h2>
+              <div className="caixa-livre-time">{formatTime(time)}</div>
+            </div>
           </div>
         ) : (
           <table>
