@@ -149,6 +149,10 @@ export async function calculateSessionTotals(sessionId: number) {
   let salesTotal = 0;
   let bleedsTotal = 0;
   let suppliesTotal = 0;
+  let discountTotal = 0;
+  let cancelledCount = 0;
+  let cancelledTotal = 0;
+  let grossTotal = 0;
   const paymentMethods: Record<string, number> = {};
 
   const operatorStats: Record<string, {
@@ -185,6 +189,8 @@ export async function calculateSessionTotals(sessionId: number) {
 
     if (sale.status === 'completed') {
       salesTotal += sale.netTotal; // Usar netTotal
+      discountTotal += sale.discount;
+      grossTotal += sale.total; // Bruto total
       const method = sale.paymentMethod;
       paymentMethods[method] = (paymentMethods[method] || 0) + sale.netTotal;
 
@@ -192,6 +198,9 @@ export async function calculateSessionTotals(sessionId: number) {
       stats.totalSales += sale.netTotal;
       stats.totalDiscount += sale.discount;
       stats.paymentMethods[method] = (stats.paymentMethods[method] || 0) + sale.netTotal;
+    } else if (sale.status === 'cancelled') {
+      cancelledCount++;
+      cancelledTotal += sale.total;
     }
   }
 
@@ -225,13 +234,17 @@ export async function calculateSessionTotals(sessionId: number) {
 
   return {
     salesTotal,
-    salesCount: sessionSales.length,
+    salesCount: sessionSales.filter(s => s.status === 'completed').length,
     bleedsTotal,
     suppliesTotal,
     netTotal,
     paymentMethods,
     operatorSales: operatorStats,
-    detailedMovements
+    detailedMovements,
+    discountTotal,
+    cancelledCount,
+    cancelledTotal,
+    grossTotal
   };
 }
 

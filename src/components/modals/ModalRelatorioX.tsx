@@ -50,13 +50,14 @@ export default function ModalRelatorioX({ onClose, sessionId }: ModalRelatorioXP
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <div className="info-card" style={{ padding: '15px' }}>
-                <span className="label">Total Vendas</span>
-                <span className="value" style={{ color: 'var(--success)' }}>{formatCurrency(data.salesTotal)}</span>
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{data.salesCount} vendas</span>
+                <span className="label">Venda Bruta</span>
+                <span className="value" style={{ color: 'var(--success)' }}>{formatCurrency(data.grossTotal || 0)}</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{data.salesCount} vendas concluídas</span>
               </div>
               <div className="info-card" style={{ padding: '15px' }}>
-                <span className="label">Saldo Líquido</span>
+                <span className="label">Saldo Líquido em Gaveta</span>
                 <span className="value">{formatCurrency(data.netTotal)}</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Incluindo fundo de troco</span>
               </div>
             </div>
 
@@ -67,7 +68,19 @@ export default function ModalRelatorioX({ onClose, sessionId }: ModalRelatorioXP
               </div>
               <div className="info-card" style={{ padding: '15px' }}>
                 <span className="label">Suprimentos</span>
-                <span className="value" style={{ color: 'var(--primary)' }}>{formatCurrency(data.suppliesTotal)}</span>
+                <span className="value" style={{ color: 'var(--success)' }}>{formatCurrency(data.suppliesTotal)}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="info-card" style={{ padding: '15px' }}>
+                <span className="label">Descontos Concedidos</span>
+                <span className="value" style={{ color: 'var(--warning)' }}>{formatCurrency(data.discountTotal || 0)}</span>
+              </div>
+              <div className="info-card" style={{ padding: '15px' }}>
+                <span className="label">Cancelamentos</span>
+                <span className="value" style={{ color: 'var(--danger)' }}>{formatCurrency(data.cancelledTotal || 0)}</span>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{data.cancelledCount || 0} cupons cancelados</span>
               </div>
             </div>
 
