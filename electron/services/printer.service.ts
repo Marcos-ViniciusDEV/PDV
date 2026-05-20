@@ -207,7 +207,6 @@ export function generateZReport(data: {
   };
   title?: string;
 }) {
-  const diff = data.finalAmount - data.netTotal;
   const fiscal = data.fiscal || {
     crz: 0, cro: 0, gt: 0, cooInitial: 0, cooFinal: 0, 
     grossTotal: data.salesTotal, discountTotal: 0, cancelledCount: 0, cancelledTotal: 0,

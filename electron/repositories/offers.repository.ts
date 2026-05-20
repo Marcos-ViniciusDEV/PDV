@@ -1,6 +1,6 @@
 import { eq, and, lte, gte, desc } from "drizzle-orm";
 import { getDb } from "../db/config";
-import { offers, type InsertOffer, type Offer } from "../db/schema";
+import { offers, type Offer } from "../db/schema";
 
 /**
  * Repository para ofertas

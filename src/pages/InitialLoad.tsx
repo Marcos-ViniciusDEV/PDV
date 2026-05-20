@@ -6,7 +6,6 @@ import { useAuthStore } from '../stores/authStore';
 export default function InitialLoad() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('Iniciando...');
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,7 +55,6 @@ export default function InitialLoad() {
 
     } catch (err: unknown) {
       // Mesmo com erro, permitir continuar em modo offline
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar dados';
       console.error('Erro na carga inicial:', err);
       
       setProgress(100);

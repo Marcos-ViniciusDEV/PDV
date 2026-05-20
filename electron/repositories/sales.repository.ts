@@ -5,10 +5,8 @@ import {
   saleItems,
   salePayments,
   counters,
-  products,
   type Sale,
   type InsertSale,
-  type SaleItem,
   type InsertSaleItem,
   type InsertSalePayment,
 } from "../db/schema";

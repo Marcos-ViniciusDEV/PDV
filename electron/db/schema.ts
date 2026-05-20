@@ -6,7 +6,6 @@ import {
   text,
   mysqlEnum,
   boolean,
-  date,
 } from "drizzle-orm/mysql-core";
 
 /**

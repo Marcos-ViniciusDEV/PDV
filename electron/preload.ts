@@ -92,8 +92,8 @@ declare global {
         // Caixa
         abrirCaixa: (data: { operatorId: number; operatorName: string; initialAmount: number }) => Promise<{ success: boolean; session?: any; receiptHtml?: string; error?: string }>;
         fecharCaixa: (data: { sessionId: number; finalAmount: number }) => Promise<{ success: boolean; result?: any; zReportHtml?: string; error?: string }>;
-        sangria: (data: { sessionId: number; amount: number; reason: string; operatorName: string }) => Promise<{ success: boolean; movement?: any; error?: string }>;
-        suprimento: (data: { sessionId: number; amount: number; reason: string; operatorName: string }) => Promise<{ success: boolean; movement?: any; error?: string }>;
+        sangria: (data: { sessionId: number; amount: number; reason: string; operatorName: string; operatorId?: number }) => Promise<{ success: boolean; movement?: any; receiptHtml?: string; error?: string }>;
+        suprimento: (data: { sessionId: number; amount: number; reason: string; operatorName: string; operatorId?: number }) => Promise<{ success: boolean; movement?: any; receiptHtml?: string; error?: string }>;
         getCaixaStatus: (operatorId: number) => Promise<{ isOpen: boolean; session?: any; error?: string }>;
         getCaixaTotals: (sessionId: number) => Promise<{ success: boolean; totals?: any; error?: string }>;
         getDailyZReport: () => Promise<{ success: boolean; zReportHtml?: string; error?: string }>;

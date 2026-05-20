@@ -191,7 +191,7 @@ export async function calculateSessionTotals(sessionId: number) {
       salesTotal += sale.netTotal; // Usar netTotal
       discountTotal += sale.discount;
       grossTotal += sale.total; // Bruto total
-      const method = sale.paymentMethod;
+      const method = sale.paymentMethod || 'DINHEIRO';
       paymentMethods[method] = (paymentMethods[method] || 0) + sale.netTotal;
 
       // Operator breakdown
@@ -347,7 +347,7 @@ export async function getDailyTotals(date: Date) {
 
     if (sale.status === 'completed') {
       salesTotal += sale.netTotal;
-      const method = sale.paymentMethod;
+      const method = sale.paymentMethod || 'DINHEIRO';
       paymentMethods[method] = (paymentMethods[method] || 0) + sale.netTotal;
 
       // Operator breakdown
