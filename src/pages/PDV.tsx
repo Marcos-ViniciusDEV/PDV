@@ -235,7 +235,6 @@ export default function PDV() {
         
         if (result) {
           printCancellationCoupon(result, itemsToCancel, discountToCancel);
-          alert(`Cupom Cancelado com Sucesso!\nIdentificação (Número do Cupom): CCF: ${result.ccf} | COO: ${result.coo}\nData: ${new Date().toLocaleDateString('pt-BR')}`);
         }
       } catch (error) {
         alert('Erro ao cancelar venda');
