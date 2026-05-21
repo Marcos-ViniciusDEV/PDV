@@ -2,7 +2,8 @@
 const mockDb = {
   getProducts: async () => {
     const data = localStorage.getItem("pdv_products");
-    return data ? JSON.parse(data) : [];
+    const products = data ? JSON.parse(data) : [];
+    return products.filter((product: any) => product.ativo !== false && product.ativo !== 0);
   },
 
   getUsers: async () => {

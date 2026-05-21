@@ -19,6 +19,22 @@ const PAYMENT_METHODS = [
   { id: "PIX", label: "PIX", icon: "📱" },
 ];
 
+const PAYMENT_SHORTCUTS: Record<string, string> = {
+  DINHEIRO: "F1",
+  DEBITO: "F2",
+  CREDITO: "F3",
+  PIX: "F4",
+};
+
+const PAYMENT_LABELS: Record<string, string> = {
+  DINHEIRO: "Dinheiro",
+  DEBITO: "Débito",
+  CREDITO: "Crédito",
+  PIX: "PIX",
+};
+
+const getPaymentLabel = (method: string) => PAYMENT_LABELS[method] || method;
+
 export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoProps) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [selectedMethodIndex, setSelectedMethodIndex] = useState(0);
@@ -55,6 +71,17 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
+        return;
+      }
+
+      const shortcutIndex = PAYMENT_METHODS.findIndex(
+        (method) => PAYMENT_SHORTCUTS[method.id] === e.key.toUpperCase()
+      );
+      if (shortcutIndex >= 0) {
+        e.preventDefault();
+        setSelectedMethodIndex(shortcutIndex);
+        setIsInputFocused(true);
+        setTimeout(() => inputRef.current?.select(), 10);
         return;
       }
 
@@ -266,7 +293,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
             
             ${payments.map(p => `
               <div class="text-right">
-                ${p.method} R$ ${(p.amount / 100).toFixed(2)}
+                ${getPaymentLabel(p.method)} R$ ${(p.amount / 100).toFixed(2)}
               </div>
             `).join("")}
             
@@ -323,10 +350,10 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
                   border: selectedMethodIndex === index ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)'
                 }}
               >
-                <span style={{ fontSize: '24px', marginRight: '10px' }}>{method.icon}</span>
-                <span style={{ fontSize: '18px' }}>{method.label}</span>
+                <span style={{ fontSize: '14px', marginRight: '10px', fontWeight: 700 }}>{PAYMENT_SHORTCUTS[method.id]}</span>
+                <span style={{ fontSize: '18px' }}>{getPaymentLabel(method.id)}</span>
                 {selectedMethodIndex === index && (
-                  <span style={{ marginLeft: 'auto', fontSize: '12px' }}>⏎ Selecionar</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '12px' }}>Selecionado</span>
                 )}
               </button>
             ))}
@@ -337,7 +364,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '10px', color: 'var(--text-secondary)' }}>
-              Valor a Pagar ({PAYMENT_METHODS[selectedMethodIndex].label})
+              Valor a Pagar ({getPaymentLabel(PAYMENT_METHODS[selectedMethodIndex].id)})
             </label>
             <input
               ref={inputRef}
@@ -369,7 +396,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {payments.map((p, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                    <span>{PAYMENT_METHODS.find(m => m.id === p.method)?.label}</span>
+                    <span>{getPaymentLabel(p.method)}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontWeight: 'bold' }}>{formatCurrency(p.amount)}</span>
                       <button 

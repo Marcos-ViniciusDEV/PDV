@@ -16,6 +16,7 @@ interface CatalogData {
     precoVenda: number;
     unidade: string;
     estoque: number;
+    ativo?: boolean | number;
   }>;
   usuarios: Array<{
     id: number;
@@ -44,7 +45,7 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
       precoVenda: p.precoVenda,
       unidade: p.unidade,
       estoque: p.estoque,
-      ativo: 1,
+      ativo: p.ativo === false || p.ativo === 0 ? 0 : 1,
     }));
     
     await productsRepository.upsertProducts(products);
