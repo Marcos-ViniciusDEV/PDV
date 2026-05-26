@@ -81,6 +81,17 @@ export async function upsertProducts(productList: InsertProduct[]): Promise<void
           unidade: product.unidade,
           estoque: product.estoque,
           ativo: product.ativo,
+          ncm: product.ncm,
+          cest: product.cest,
+          origem: product.origem,
+          cstIcms: product.cstIcms,
+          csosnIcms: product.csosnIcms,
+          cfopPadraoVenda: product.cfopPadraoVenda,
+          aliquotaIcms: product.aliquotaIcms,
+          aliquotaPis: product.aliquotaPis,
+          aliquotaCofins: product.aliquotaCofins,
+          pisCst: product.pisCst,
+          cofinsCst: product.cofinsCst,
         })
         .where(eq(products.id, product.id!));
     } else {

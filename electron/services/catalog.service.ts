@@ -1,5 +1,6 @@
 import * as productsRepository from "../repositories/products.repository";
 import * as usersRepository from "../repositories/users.repository";
+import * as configService from "./config.service";
 
 /**
  * Service de catálogo
@@ -17,6 +18,17 @@ interface CatalogData {
     unidade: string;
     estoque: number;
     ativo?: boolean | number;
+    ncm?: string | null;
+    cest?: string | null;
+    origem?: number | null;
+    cstIcms?: string | null;
+    csosnIcms?: string | null;
+    cfopPadraoVenda?: string | null;
+    aliquotaIcms?: number | null;
+    aliquotaPis?: number | null;
+    aliquotaCofins?: number | null;
+    pisCst?: string | null;
+    cofinsCst?: string | null;
   }>;
   usuarios: Array<{
     id: number;
@@ -25,6 +37,7 @@ interface CatalogData {
     passwordHash: string;
     role: string;
   }>;
+  configuracaoFiscal?: any;
 }
 
 /**
@@ -46,6 +59,17 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
       unidade: p.unidade,
       estoque: p.estoque,
       ativo: p.ativo === false || p.ativo === 0 ? 0 : 1,
+      ncm: p.ncm || null,
+      cest: p.cest || null,
+      origem: p.origem ?? 0,
+      cstIcms: p.cstIcms || null,
+      csosnIcms: p.csosnIcms || null,
+      cfopPadraoVenda: p.cfopPadraoVenda || null,
+      aliquotaIcms: p.aliquotaIcms || 0,
+      aliquotaPis: p.aliquotaPis || 0,
+      aliquotaCofins: p.aliquotaCofins || 0,
+      pisCst: p.pisCst || null,
+      cofinsCst: p.cofinsCst || null,
     }));
     
     await productsRepository.upsertProducts(products);
@@ -62,6 +86,10 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
     }));
     
     await usersRepository.upsertUsers(users);
+  }
+
+  if (data.configuracaoFiscal) {
+    await configService.applyFiscalConfig(data.configuracaoFiscal);
   }
   
   console.log("[Catalog Service] ✅ Catalog loaded successfully");

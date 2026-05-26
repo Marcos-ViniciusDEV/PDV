@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1764464103542,
+      "tag": "0000_chunky_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1764721635003,
+      "tag": "0001_nostalgic_malcolm_colcord",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1779817800000,
+      "tag": "0002_fiscal_config",
+      "breakpoints": true
+    }
+  ]
+}

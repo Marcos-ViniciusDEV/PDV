@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import * as salesRepository from "../repositories/sales.repository";
 import * as cashService from "./cash.service";
+import * as configService from "./config.service";
 import type { InsertSale, InsertSaleItem, InsertSalePayment } from "../db/schema";
 
 /**
@@ -59,6 +60,8 @@ export async function createSale(input: CreateSaleInput) {
   const numeroVenda = `${input.pdvId}-${coo.toString().padStart(6, "0")}`;
   
   // Preparar dados da venda
+  const config = await configService.getConfig();
+  const fiscalEnabled = !!config?.habilitarNfce;
   const saleData: InsertSale = {
     uuid,
     numeroVenda,
@@ -72,7 +75,7 @@ export async function createSale(input: CreateSaleInput) {
     discount,
     netTotal,
     paymentMethod: input.payments[0]?.method || "MISTO", // Primary method or MISTO
-    couponType: "NFC-e",
+    couponType: fiscalEnabled ? "NFC-e" : "CONTROLE_INTERNO",
     syncStatus: "pending",
   };
   

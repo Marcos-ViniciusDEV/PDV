@@ -46,3 +46,36 @@ export async function saveConfig(data: any) {
   
   return true;
 }
+
+/**
+ * Aplica a configuracao fiscal recebida pela carga do ERP.
+ */
+export async function applyFiscalConfig(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not initialized");
+
+  const existingConfig = await getConfig();
+  if (!existingConfig) {
+    console.warn("[Config Service] Fiscal config received before local activation. Ignoring.");
+    return false;
+  }
+
+  await db.update(configuracoes).set({
+    habilitarNfce: !!data.habilitarNfce,
+    ambienteFiscal: data.ambiente || "HOMOLOGACAO",
+    regimeTributario: data.regimeTributario || "SIMPLES_NACIONAL",
+    serieNfce: Number(data.serieNfce || 1),
+    serieNfe: Number(data.serieNfe || 1),
+    proximoNumeroNfce: Number(data.proximoNumeroNfce || 1),
+    proximoNumeroNfe: Number(data.proximoNumeroNfe || 1),
+    idTokenIsc: data.idTokenIsc || null,
+    cscConfigurado: !!data.cscConfigurado,
+    certificadoConfigurado: !!data.certificadoConfigurado,
+    certificadoValidade: data.certificadoValidade ? new Date(data.certificadoValidade) : null,
+    fiscalAtualizadoEm: new Date(),
+    atualizadoEm: new Date(),
+  }).where(eq(configuracoes.id, existingConfig.id));
+
+  console.log(`[Config Service] Fiscal mode updated: NFC-e ${data.habilitarNfce ? "enabled" : "disabled"}`);
+  return true;
+}
