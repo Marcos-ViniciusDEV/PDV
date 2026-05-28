@@ -33,7 +33,14 @@ const PAYMENT_LABELS: Record<string, string> = {
   PIX: "PIX",
 };
 
-const getPaymentLabel = (method: string) => PAYMENT_LABELS[method] || method;
+const getPaymentLabel = (method: string, labels: Record<string, string> = PAYMENT_LABELS) => labels[method] || method;
+
+function paymentIcon(tipo: string) {
+  const normalized = String(tipo || "").toUpperCase();
+  if (normalized === "DINHEIRO") return "💵";
+  if (normalized === "PIX") return "▣";
+  return "💳";
+}
 
 export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoProps) {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -41,6 +48,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
   const [amountInput, setAmountInput] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState(PAYMENT_METHODS);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const methodRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -55,6 +63,37 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
   const totalPaid = useMemo(() => payments.reduce((sum, p) => sum + p.amount, 0), [payments]);
   const remaining = Math.max(0, total - totalPaid);
   const change = Math.max(0, totalPaid - total);
+  const paymentLabels = useMemo(() => {
+    return paymentMethods.reduce<Record<string, string>>((acc, method) => {
+      acc[method.id] = method.label;
+      return acc;
+    }, { ...PAYMENT_LABELS });
+  }, [paymentMethods]);
+
+  useEffect(() => {
+    async function loadPaymentConfig() {
+      try {
+        const config = await window.electron.sync.getPaymentConfig();
+        const forms = config?.formasPagamento;
+        if (!Array.isArray(forms) || forms.length === 0) return;
+
+        const mapped = forms
+          .filter((form: any) => form.ativo !== false)
+          .sort((a: any, b: any) => Number(a.ordem || 0) - Number(b.ordem || 0))
+          .map((form: any) => ({
+            id: String(form.tipo || form.codigo || form.nome).toUpperCase(),
+            label: form.nome,
+            icon: paymentIcon(form.tipo),
+          }));
+
+        if (mapped.length > 0) setPaymentMethods(mapped);
+      } catch (error) {
+        console.warn("[ModalPagamento] Using default payment methods", error);
+      }
+    }
+
+    loadPaymentConfig();
+  }, []);
 
   // Initialize amount input with remaining value when not focused
   useEffect(() => {
@@ -74,7 +113,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
         return;
       }
 
-      const shortcutIndex = PAYMENT_METHODS.findIndex(
+      const shortcutIndex = paymentMethods.findIndex(
         (method) => PAYMENT_SHORTCUTS[method.id] === e.key.toUpperCase()
       );
       if (shortcutIndex >= 0) {
@@ -102,10 +141,10 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
       // Navigation when input is NOT focused
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setSelectedMethodIndex((prev) => (prev + 1) % PAYMENT_METHODS.length);
+        setSelectedMethodIndex((prev) => (prev + 1) % paymentMethods.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedMethodIndex((prev) => (prev - 1 + PAYMENT_METHODS.length) % PAYMENT_METHODS.length);
+        setSelectedMethodIndex((prev) => (prev - 1 + paymentMethods.length) % paymentMethods.length);
       } else if (e.key === "Enter") {
         e.preventDefault();
         if (remaining <= 0 && payments.length > 0) {
@@ -123,7 +162,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [loading, isInputFocused, selectedMethodIndex, amountInput, remaining, payments]);
+  }, [loading, isInputFocused, selectedMethodIndex, amountInput, remaining, payments, paymentMethods]);
 
   // Focus management
   useEffect(() => {
@@ -142,7 +181,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
       return;
     }
 
-    const method = PAYMENT_METHODS[selectedMethodIndex].id;
+    const method = paymentMethods[selectedMethodIndex]?.id || "DINHEIRO";
     
     // Allow overpayment only for CASH
     if (method !== "DINHEIRO" && amount > remaining) {
@@ -293,7 +332,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
             
             ${payments.map(p => `
               <div class="text-right">
-                ${getPaymentLabel(p.method)} R$ ${(p.amount / 100).toFixed(2)}
+                ${getPaymentLabel(p.method, paymentLabels)} R$ ${(p.amount / 100).toFixed(2)}
               </div>
             `).join("")}
             
@@ -335,7 +374,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {PAYMENT_METHODS.map((method, index) => (
+            {paymentMethods.map((method, index) => (
               <button
                 key={method.id}
                 ref={el => methodRefs.current[index] = el}
@@ -351,7 +390,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
                 }}
               >
                 <span style={{ fontSize: '14px', marginRight: '10px', fontWeight: 700 }}>{PAYMENT_SHORTCUTS[method.id]}</span>
-                <span style={{ fontSize: '18px' }}>{getPaymentLabel(method.id)}</span>
+                <span style={{ fontSize: '18px' }}>{getPaymentLabel(method.id, paymentLabels)}</span>
                 {selectedMethodIndex === index && (
                   <span style={{ marginLeft: 'auto', fontSize: '12px' }}>Selecionado</span>
                 )}
@@ -364,7 +403,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '10px', color: 'var(--text-secondary)' }}>
-              Valor a Pagar ({getPaymentLabel(PAYMENT_METHODS[selectedMethodIndex].id)})
+              Valor a Pagar ({getPaymentLabel(paymentMethods[selectedMethodIndex]?.id || "DINHEIRO", paymentLabels)})
             </label>
             <input
               ref={inputRef}
@@ -396,7 +435,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {payments.map((p, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                    <span>{getPaymentLabel(p.method)}</span>
+                    <span>{getPaymentLabel(p.method, paymentLabels)}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontWeight: 'bold' }}>{formatCurrency(p.amount)}</span>
                       <button 

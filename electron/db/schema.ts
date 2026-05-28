@@ -18,6 +18,7 @@ export const configuracoes = mysqlTable("configuracoes", {
   pdvId: varchar("pdvId", { length: 50 }).notNull(),
   tokenAutenticacao: text("tokenAutenticacao").notNull(),
   urlBackend: varchar("urlBackend", { length: 255 }).notNull(),
+  empresaCnpj: varchar("empresaCnpj", { length: 18 }),
   habilitarNfce: boolean("habilitarNfce").default(false).notNull(),
   ambienteFiscal: varchar("ambienteFiscal", { length: 20 }).default("HOMOLOGACAO").notNull(),
   regimeTributario: varchar("regimeTributario", { length: 30 }).default("SIMPLES_NACIONAL").notNull(),
@@ -30,6 +31,9 @@ export const configuracoes = mysqlTable("configuracoes", {
   certificadoConfigurado: boolean("certificadoConfigurado").default(false).notNull(),
   certificadoValidade: timestamp("certificadoValidade"),
   fiscalAtualizadoEm: timestamp("fiscalAtualizadoEm"),
+  pagamentosVersaoCarga: int("pagamentosVersaoCarga").default(0).notNull(),
+  pagamentosConfigJson: text("pagamentosConfigJson"),
+  pagamentosAtualizadoEm: timestamp("pagamentosAtualizadoEm"),
   ultimaSincronizacao: timestamp("ultimaSincronizacao"),
   atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
 });

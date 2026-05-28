@@ -38,6 +38,7 @@ interface CatalogData {
     role: string;
   }>;
   configuracaoFiscal?: any;
+  configuracoesPagamento?: any;
 }
 
 /**
@@ -90,6 +91,10 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
 
   if (data.configuracaoFiscal) {
     await configService.applyFiscalConfig(data.configuracaoFiscal);
+  }
+
+  if (data.configuracoesPagamento) {
+    await configService.applyPaymentConfig(data.configuracoesPagamento);
   }
   
   console.log("[Catalog Service] ✅ Catalog loaded successfully");

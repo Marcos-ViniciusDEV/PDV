@@ -273,6 +273,15 @@ export function registerIpcHandlers() {
     }
   });
 
+  ipcMain.handle("get-payment-config", async () => {
+    try {
+      return await configService.getPaymentConfig();
+    } catch (error: any) {
+      console.error("[Controller] get-payment-config error:", error);
+      throw error;
+    }
+  });
+
   ipcMain.handle("save-config", async (_, configData: any) => {
     try {
       return await configService.saveConfig(configData);

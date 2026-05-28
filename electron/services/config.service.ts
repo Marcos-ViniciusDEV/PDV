@@ -27,6 +27,7 @@ export async function saveConfig(data: any) {
     await db.update(configuracoes).set({
       empresaId: data.empresaId,
       empresaNome: data.empresaNome,
+      empresaCnpj: data.empresaCnpj || data.cnpj || existingConfig.empresaCnpj || null,
       pdvId: data.pdvId,
       tokenAutenticacao: data.tokenAutenticacao,
       urlBackend: data.urlBackend,
@@ -37,6 +38,7 @@ export async function saveConfig(data: any) {
     await db.insert(configuracoes).values({
       empresaId: data.empresaId,
       empresaNome: data.empresaNome,
+      empresaCnpj: data.empresaCnpj || data.cnpj || null,
       pdvId: data.pdvId,
       tokenAutenticacao: data.tokenAutenticacao,
       urlBackend: data.urlBackend,
@@ -78,4 +80,50 @@ export async function applyFiscalConfig(data: any) {
 
   console.log(`[Config Service] Fiscal mode updated: NFC-e ${data.habilitarNfce ? "enabled" : "disabled"}`);
   return true;
+}
+
+/**
+ * Aplica configuracoes de pagamento recebidas pela carga do ERP.
+ */
+export async function applyPaymentConfig(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not initialized");
+
+  const existingConfig = await getConfig();
+  if (!existingConfig) {
+    console.warn("[Config Service] Payment config received before local activation. Ignoring.");
+    return false;
+  }
+
+  if (data.empresaId && Number(data.empresaId) !== Number(existingConfig.empresaId)) {
+    console.warn("[Config Service] Payment config rejected: empresaId does not match local activation.");
+    return false;
+  }
+
+  if (existingConfig.empresaCnpj && data.cnpjEmpresa && existingConfig.empresaCnpj !== data.cnpjEmpresa) {
+    console.warn("[Config Service] Payment config rejected: CNPJ does not match local activation.");
+    return false;
+  }
+
+  await db.update(configuracoes).set({
+    empresaCnpj: data.cnpjEmpresa || existingConfig.empresaCnpj || null,
+    pagamentosVersaoCarga: Number(data.versaoCarga || 0),
+    pagamentosConfigJson: JSON.stringify(data),
+    pagamentosAtualizadoEm: new Date(),
+    atualizadoEm: new Date(),
+  }).where(eq(configuracoes.id, existingConfig.id));
+
+  console.log(`[Config Service] Payment config updated: version ${data.versaoCarga || 0}`);
+  return true;
+}
+
+export async function getPaymentConfig() {
+  const config = await getConfig();
+  if (!config?.pagamentosConfigJson) return null;
+
+  try {
+    return JSON.parse(config.pagamentosConfigJson);
+  } catch {
+    return null;
+  }
 }

@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('electron', {
     syncNow: () => ipcRenderer.invoke('sync-now'),
     getStatus: () => ipcRenderer.invoke('get-sync-status'),
     getConfig: () => ipcRenderer.invoke('get-config'),
+    getPaymentConfig: () => ipcRenderer.invoke('get-payment-config'),
     saveTenantConfig: (data: any) => ipcRenderer.invoke('save-config', data),
   },
 });
@@ -108,6 +109,7 @@ declare global {
         syncNow: () => Promise<any>;
         getStatus: () => Promise<any>;
         getConfig: () => Promise<any>;
+        getPaymentConfig: () => Promise<any>;
         saveTenantConfig: (data: any) => Promise<boolean>;
       };
     };
