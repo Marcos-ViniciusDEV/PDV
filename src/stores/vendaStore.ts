@@ -90,10 +90,14 @@ export const useVendaStore = create<VendaState>()(
         if (items.length === 0) return null;
 
         try {
+          const config = await window.electron.sync.getConfig();
+          const pdvId = config?.pdvId ? String(config.pdvId) : '';
+          if (!pdvId) throw new Error('PDV nao configurado');
+
           const result = await window.electron.db.cancelSale({
             operatorId,
             operatorName,
-            pdvId: 'PDV-01', // TODO: Pegar do config
+            pdvId,
             items: items.map(item => ({
               productId: item.id,
               quantity: item.quantity,

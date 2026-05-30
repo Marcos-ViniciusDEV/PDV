@@ -145,11 +145,21 @@ const mockSync = {
   },
   syncNow: async () => {
     console.log("Sync started");
+    return { success: true, synced: 0 };
   },
   getStatus: async () => ({
     isOnline: true,
     lastSync: new Date().toISOString(),
   }),
+  getConfig: async () => {
+    const data = localStorage.getItem("pdv_sync_config");
+    return data ? JSON.parse(data) : null;
+  },
+  getPaymentConfig: async () => null,
+  saveTenantConfig: async (data: any) => {
+    localStorage.setItem("pdv_sync_config", JSON.stringify(data));
+    return true;
+  },
 };
 
 // Inicializar dados de exemplo

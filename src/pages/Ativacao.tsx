@@ -1,9 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Building2, KeyRound, Link, Monitor } from 'lucide-react';
+import { connectToServer } from '../lib/websocket';
+
+function getEmpresaIdFromToken(token: string) {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return 0;
+    const normalizedPayload = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const decoded = JSON.parse(window.atob(normalizedPayload));
+    return Number(decoded.empresaId || 0);
+  } catch {
+    return 0;
+  }
+}
 
 export default function Ativacao() {
-  const [codigoEmpresa, setCodigoEmpresa] = useState('');
-  const [senhaAtivacao, setSenhaAtivacao] = useState('');
+  const [cnpjEmpresa, setCnpjEmpresa] = useState('');
+  const [tokenAutenticacao, setTokenAutenticacao] = useState('');
   const [pdvId, setPdvId] = useState('');
   const [urlBackend, setUrlBackend] = useState('http://localhost:3000');
   const [loading, setLoading] = useState(false);
@@ -16,41 +33,35 @@ export default function Ativacao() {
     setError('');
 
     try {
-      const response = await fetch(`${urlBackend}/api/empresas/pdv/ativar`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          codigoEmpresa: codigoEmpresa.toUpperCase(),
-          senhaAtivacao,
-          pdvId,
-        }),
-      });
+      const cleanCnpj = cnpjEmpresa.trim();
+      const cleanPdvId = pdvId.trim();
+      const cleanToken = tokenAutenticacao.trim();
+      const cleanUrlBackend = urlBackend.trim() || 'http://localhost:3000';
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao ativar o PDV');
+      const empresaId = getEmpresaIdFromToken(cleanToken);
+      if (!empresaId) {
+        throw new Error('Token de sincronizacao invalido. Gere o token no ERP e cole aqui.');
       }
 
-      // Salvar na tabela local via IPC
       const success = await window.electron.sync.saveTenantConfig({
-        empresaId: data.empresa.id,
-        empresaNome: data.empresa.nomeFantasia || data.empresa.razaoSocial,
-        pdvId: data.pdvId,
-        tokenAutenticacao: data.token,
-        urlBackend,
+        empresaId,
+        empresaNome: 'Empresa vinculada',
+        empresaCnpj: cleanCnpj,
+        pdvId: cleanPdvId,
+        tokenAutenticacao: cleanToken,
+        urlBackend: cleanUrlBackend,
       });
 
       if (!success) {
-        throw new Error('Erro ao salvar as configurações locais');
+        throw new Error('Erro ao salvar as configuracoes locais');
       }
 
-      // Sucesso! Redirecionar para o InitialLoad para baixar os produtos
+      await window.electron.sync.loadCatalog();
+      await connectToServer();
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Falha na conexão com o servidor');
+      const isNetworkError = err.message === 'Failed to fetch';
+      setError(isNetworkError ? 'Nao foi possivel conectar ao ERP. Verifique se o servidor esta aberto e se a URL esta correta.' : err.message || 'Falha na conexao com o servidor');
     } finally {
       setLoading(false);
     }
@@ -58,66 +69,74 @@ export default function Ativacao() {
 
   return (
     <div className="login-container">
-      <div className="login-box" style={{ maxWidth: '500px' }}>
-        <h1>Ativação do PDV</h1>
-        <p className="subtitle">Vincule este terminal à sua empresa</p>
+      <div className="login-box activation-box">
+        <h1>Ativacao do PDV</h1>
+        <p className="subtitle">Vincule este terminal a sua empresa</p>
 
-        {error && (
-          <div style={{ padding: '10px', background: '#fee2e2', color: '#991b1b', borderRadius: '4px', marginBottom: '15px', fontSize: '14px' }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="login-error">{error}</div>}
 
-        <form onSubmit={handleAtivar} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>🌐 Servidor do ERP (URL)</label>
+        <form onSubmit={handleAtivar}>
+          <div className="form-group">
+            <label className="field-label-with-icon">
+              <Link size={16} />
+              Servidor do ERP
+            </label>
             <input
               type="url"
               value={urlBackend}
               onChange={(e) => setUrlBackend(e.target.value)}
-              className="login-input"
+              placeholder="http://localhost:3000"
               required
+              disabled={loading}
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>🏢 Código da Empresa</label>
+          <div className="form-group">
+            <label className="field-label-with-icon">
+              <Building2 size={16} />
+              CNPJ da empresa
+            </label>
             <input
               type="text"
-              value={codigoEmpresa}
-              onChange={(e) => setCodigoEmpresa(e.target.value)}
-              className="login-input"
-              placeholder="Ex: LOJA-X123"
-              style={{ textTransform: 'uppercase' }}
+              value={cnpjEmpresa}
+              onChange={(e) => setCnpjEmpresa(e.target.value)}
+              placeholder="00.000.000/0001-00"
               required
+              disabled={loading}
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>💻 ID deste Terminal (Caixa)</label>
+          <div className="form-group">
+            <label className="field-label-with-icon">
+              <Monitor size={16} />
+              ID deste terminal
+            </label>
             <input
               type="text"
               value={pdvId}
               onChange={(e) => setPdvId(e.target.value)}
-              className="login-input"
               placeholder="Ex: CAIXA-01"
               required
+              disabled={loading}
             />
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', fontWeight: 'bold' }}>🔒 Senha de Ativação</label>
+          <div className="form-group">
+            <label className="field-label-with-icon">
+              <KeyRound size={16} />
+              Token de sincronizacao
+            </label>
             <input
               type="password"
-              value={senhaAtivacao}
-              onChange={(e) => setSenhaAtivacao(e.target.value)}
-              className="login-input"
+              value={tokenAutenticacao}
+              onChange={(e) => setTokenAutenticacao(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
 
-          <button type="submit" className="login-button" disabled={loading} style={{ marginTop: '10px' }}>
-            {loading ? 'Validando e Registrando...' : 'Ativar Terminal'}
+          <button type="submit" className="btn-primary activation-submit" disabled={loading}>
+            {loading ? 'Validando...' : 'Ativar terminal'}
           </button>
         </form>
       </div>

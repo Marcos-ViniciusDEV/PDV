@@ -22,6 +22,7 @@ export default function PDV() {
   const navigate = useNavigate();
   
   const [sessionId, setSessionId] = useState<number | null>(null);
+  const [pdvId, setPdvId] = useState('');
   
   const [showPayment, setShowPayment] = useState(false);
   const [showRecoverSale, setShowRecoverSale] = useState(false);
@@ -55,7 +56,7 @@ export default function PDV() {
       await window.electron.db.suspendSale({
         operatorId: user?.id,
         operatorName: user?.name,
-        pdvId: "PDV001",
+        pdvId,
         items: items.map(item => ({
           productId: item.id,
           quantity: item.quantity,
@@ -75,6 +76,12 @@ export default function PDV() {
   const handleRecoverSale = () => {
     setShowRecoverSale(true);
   };
+
+  useEffect(() => {
+    window.electron.sync.getConfig().then((config) => {
+      setPdvId(config?.pdvId ? String(config.pdvId) : '');
+    });
+  }, []);
 
   // Check session on mount
   useEffect(() => {
@@ -508,7 +515,7 @@ export default function PDV() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Terminal</span>
-                <span style={{ fontWeight: 600 }}>02</span>
+                <span style={{ fontWeight: 600 }}>{pdvId || '-'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Status</span>

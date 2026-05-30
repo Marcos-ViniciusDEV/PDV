@@ -48,7 +48,7 @@ export async function initDatabase() {
   console.log("[DB] Initializing database...");
   
   try {
-    await ensureFiscalColumns();
+    await ensureLocalSchemaColumns();
 
     // Verificar se contadores existem, se não, criar
     const { counters } = schema;
@@ -69,7 +69,7 @@ export async function initDatabase() {
   }
 }
 
-async function ensureFiscalColumns() {
+async function ensureLocalSchemaColumns() {
   const databaseUrl = process.env.DATABASE_URL || "mysql://root:password@localhost:3306/pdv_local";
   const connection = await mysql.createConnection(databaseUrl);
   const dbName = new URL(databaseUrl).pathname.replace(/^\//, "");
@@ -89,6 +89,7 @@ async function ensureFiscalColumns() {
     }
   }
 
+  await addColumn("configuracoes", "empresaCnpj", "`empresaCnpj` varchar(18)");
   await addColumn("configuracoes", "habilitarNfce", "`habilitarNfce` boolean NOT NULL DEFAULT false");
   await addColumn("configuracoes", "ambienteFiscal", "`ambienteFiscal` varchar(20) NOT NULL DEFAULT 'HOMOLOGACAO'");
   await addColumn("configuracoes", "regimeTributario", "`regimeTributario` varchar(30) NOT NULL DEFAULT 'SIMPLES_NACIONAL'");
@@ -101,6 +102,9 @@ async function ensureFiscalColumns() {
   await addColumn("configuracoes", "certificadoConfigurado", "`certificadoConfigurado` boolean NOT NULL DEFAULT false");
   await addColumn("configuracoes", "certificadoValidade", "`certificadoValidade` timestamp NULL");
   await addColumn("configuracoes", "fiscalAtualizadoEm", "`fiscalAtualizadoEm` timestamp NULL");
+  await addColumn("configuracoes", "pagamentosVersaoCarga", "`pagamentosVersaoCarga` int NOT NULL DEFAULT 0");
+  await addColumn("configuracoes", "pagamentosConfigJson", "`pagamentosConfigJson` text");
+  await addColumn("configuracoes", "pagamentosAtualizadoEm", "`pagamentosAtualizadoEm` timestamp NULL");
 
   await addColumn("products", "ncm", "`ncm` varchar(8)");
   await addColumn("products", "cest", "`cest` varchar(7)");

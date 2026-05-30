@@ -12,7 +12,7 @@
 ### Fluxo Completo
 
 ```
-1. Abrir PDV (http://localhost:5174)
+1. Abrir o aplicativo Electron do PDV
    ↓
 2. Tela de Carga Inicial
    - Conectando ao servidor... (0-20%)
@@ -47,7 +47,7 @@ npm run dev
 
 ### 2. Acessar o PDV
 
-1. Abra: **http://localhost:5174**
+1. Abra o aplicativo Electron do PDV no computador do caixa
 2. Aguarde a carga automática (barra de progresso)
 3. Faça login com usuário do backend
 

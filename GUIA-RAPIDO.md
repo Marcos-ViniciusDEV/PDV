@@ -12,10 +12,10 @@
 O backend já está rodando com WebSocket em `ws://localhost:3000/pdv-ws`
 
 ### Passo 2: Abrir o PDV
-O PDV já está rodando em `http://localhost:5174`
+O servidor interno do PDV roda em `http://localhost:5174`, mas deve ser usado somente pelo aplicativo Electron.
 
 ### Passo 3: Verificar Conexão
-1. Abra `http://localhost:5174` no navegador
+1. Abra o aplicativo Electron do PDV no computador do caixa
 2. Abra o Console do navegador (F12)
 3. Você deve ver:
    ```
@@ -32,7 +32,7 @@ Abra em abas separadas:
 - `file:///c:/Users/loginn/Desktop/23,57/PDV/pdv-caixa-3.html`
 
 **Opção B: Usar o PDV principal**
-- `http://localhost:5174`
+- Aplicativo Electron do PDV
 
 ### Passo 5: Acessar Gerenciar PDV
 1. Acesse: `http://localhost:5173/pdv/gerenciar`

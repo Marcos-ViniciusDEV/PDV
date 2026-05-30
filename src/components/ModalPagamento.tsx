@@ -207,7 +207,13 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
     setLoading(true);
 
     try {
-      const orderNumber = `PDV001-${Date.now()}`;
+      const config = await window.electron.sync.getConfig();
+      const pdvId = config?.pdvId ? String(config.pdvId) : '';
+      if (!pdvId) {
+        throw new Error('PDV nao configurado. Abra a engrenagem e informe o token de sincronizacao.');
+      }
+
+      const orderNumber = `${pdvId}-${Date.now()}`;
 
       const result = await window.electron.db.saveOrder({
         orderNumber,
@@ -218,7 +224,7 @@ export default function ModalPagamento({ onClose, onSuccess }: ModalPagamentoPro
         payments: payments, // New field
         operatorId: user?.id,
         operatorName: user?.name,
-        pdvId: "PDV001",
+        pdvId,
         couponType: "NFC-e",
         items: items.map((item) => ({
           productId: item.id,

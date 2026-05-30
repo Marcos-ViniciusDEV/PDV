@@ -69,6 +69,67 @@ body {
   max-width: 400px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.login-settings-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-settings-button:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+  background: var(--bg-hover);
+  transform: rotate(18deg);
+}
+
+.login-settings-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.activation-box {
+  max-width: 460px;
+  padding: 44px 40px;
+}
+
+.field-label-with-icon {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-label-with-icon svg {
+  color: var(--accent-primary);
+}
+
+.activation-submit {
+  margin-top: 6px;
+}
+
+.login-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .login-box h1 {
@@ -578,6 +639,72 @@ body {
   color: var(--text-primary);
 }
 
+.sync-config-modal {
+  max-width: 460px;
+  padding: 28px;
+  position: relative;
+}
+
+.sync-config-modal h2 {
+  margin-bottom: 6px;
+}
+
+.sync-config-subtitle {
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-close-button:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.sync-config-modal .form-group {
+  margin-bottom: 14px;
+}
+
+.sync-config-modal .form-group input {
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.sync-config-message {
+  padding: 10px 12px;
+  margin: 4px 0 14px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.sync-config-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .util-options {
   display: flex;
   flex-direction: column;
@@ -697,5 +824,3 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: 2px;
 }
-
-

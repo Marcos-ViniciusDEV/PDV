@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { useAuthStore } from '../stores/authStore';
+import { connectToServer } from '../lib/websocket';
 
 export default function InitialLoad() {
   const [progress, setProgress] = useState(0);
@@ -34,6 +35,7 @@ export default function InitialLoad() {
       if (success) {
         setProgress(100);
         setStatus('Carga concluída!');
+        await connectToServer();
       } else {
         // Se falhar, continuar em modo offline
         setProgress(100);

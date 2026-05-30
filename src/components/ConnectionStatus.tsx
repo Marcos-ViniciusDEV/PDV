@@ -1,40 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ConnectionStatusProps {
   className?: string;
 }
 
+type SyncStatus = 'checking' | 'synced' | 'server-only' | 'offline';
+
+type LinkedPdv = {
+  pdvId: string;
+  empresaCnpj?: string | null;
+};
+
 export function ConnectionStatus({ className = '' }: ConnectionStatusProps) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const [status, setStatus] = useState<SyncStatus>('checking');
+  const [linkedPdv, setLinkedPdv] = useState<LinkedPdv | null>(null);
 
   useEffect(() => {
     checkConnection();
-    const interval = setInterval(checkConnection, 10000); // Check every 10s
+    const interval = setInterval(checkConnection, 10000);
     return () => clearInterval(interval);
   }, []);
 
   const checkConnection = async () => {
+    setStatus('checking');
+
     try {
-      const response = await fetch('http://localhost:3000/health', {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000), // 3s timeout
+      const config = await window.electron.sync.getConfig();
+      if (!config?.pdvId || !config?.tokenAutenticacao) {
+        setLinkedPdv(null);
+        setStatus('server-only');
+        return;
+      }
+
+      setLinkedPdv({
+        pdvId: String(config.pdvId),
+        empresaCnpj: config.empresaCnpj,
       });
-      setIsConnected(response.ok);
+
+      const baseUrl = config.urlBackend || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/pdv/heartbeat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.tokenAutenticacao}`,
+        },
+        body: JSON.stringify({
+          pdvId: String(config.pdvId),
+          name: `PDV ${config.pdvId}`,
+          location: config.empresaNome || config.empresaCnpj || 'Empresa configurada',
+        }),
+        signal: AbortSignal.timeout(3000),
+      });
+
+      setStatus(response.ok ? 'synced' : 'server-only');
     } catch {
-      setIsConnected(false);
-    } finally {
-      setIsChecking(false);
+      setStatus('offline');
     }
   };
 
+  const label = status === 'checking'
+    ? 'Verificando...'
+    : status === 'synced'
+      ? 'Sincronizado'
+      : status === 'server-only'
+        ? 'Nao sincronizado'
+        : 'Offline';
+
   return (
     <div className={`connection-status ${className}`}>
-      <div className={`status-indicator ${isConnected ? 'online' : 'offline'} ${isChecking ? 'checking' : ''}`}>
-        <div className="status-dot"></div>
-        <span className="status-text">
-          {isChecking ? 'Verificando...' : isConnected ? 'Online' : 'Offline'}
-        </span>
+      <div className={`status-indicator ${status}`}>
+        <div className="status-dot" />
+        <div>
+          <span className="status-text">{label}</span>
+          {linkedPdv && (
+            <span className="status-details">
+              PDV {linkedPdv.pdvId} | CNPJ {linkedPdv.empresaCnpj || 'nao informado'}
+            </span>
+          )}
+        </div>
       </div>
 
       <style>{`
@@ -46,78 +89,46 @@ export function ConnectionStatus({ className = '' }: ConnectionStatusProps) {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 8px 16px;
-          background: rgba(255, 255, 255, 0.95);
-          border-radius: 24px;
+          padding: 8px 14px;
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 20px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          backdrop-filter: blur(10px);
-          transition: all 0.3s ease;
-        }
-
-        .status-indicator:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
         }
 
         .status-dot {
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          transition: all 0.3s ease;
+          flex: 0 0 auto;
         }
 
-        .status-indicator.online .status-dot {
+        .status-indicator.synced .status-dot {
           background: #4caf50;
           box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-          animation: pulse-online 2s infinite;
+        }
+
+        .status-indicator.server-only .status-dot,
+        .status-indicator.checking .status-dot {
+          background: #ff9800;
         }
 
         .status-indicator.offline .status-dot {
           background: #f44336;
-          box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
         }
 
-        .status-indicator.checking .status-dot {
-          background: #ff9800;
-          animation: pulse-checking 1s infinite;
-        }
-
-        .status-text {
+        .status-text,
+        .status-details {
+          display: block;
+          color: #333;
           font-size: 13px;
           font-weight: 600;
-          color: #333;
         }
 
-        .status-indicator.online .status-text {
-          color: #2e7d32;
-        }
-
-        .status-indicator.offline .status-text {
-          color: #c62828;
-        }
-
-        .status-indicator.checking .status-text {
-          color: #e65100;
-        }
-
-        @keyframes pulse-online {
-          0%, 100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.7;
-            transform: scale(1.1);
-          }
-        }
-
-        @keyframes pulse-checking {
-          0%, 100% {
-            opacity: 0.5;
-          }
-          50% {
-            opacity: 1;
-          }
+        .status-details {
+          color: #666;
+          font-size: 11px;
+          font-weight: 500;
+          margin-top: 2px;
         }
       `}</style>
     </div>

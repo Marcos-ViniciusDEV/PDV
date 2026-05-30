@@ -1,8 +1,43 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Settings, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import ModalConsultarPreco from '../components/modals/ModalConsultarPreco';
+import { connectToServer } from '../lib/websocket';
+
+type SyncConfigForm = {
+  empresaId: string;
+  empresaNome: string;
+  empresaCnpj: string;
+  pdvId: string;
+  tokenAutenticacao: string;
+  urlBackend: string;
+};
+
+const emptySyncConfig: SyncConfigForm = {
+  empresaId: '',
+  empresaNome: '',
+  empresaCnpj: '',
+  pdvId: '',
+  tokenAutenticacao: '',
+  urlBackend: 'http://localhost:3000',
+};
+
+function getEmpresaIdFromToken(token: string) {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return 0;
+    const normalizedPayload = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const decoded = JSON.parse(window.atob(normalizedPayload));
+    return Number(decoded.empresaId || 0);
+  } catch {
+    return 0;
+  }
+}
 
 export default function Login() {
   const [identifier, setIdentifier] = useState('');
@@ -10,7 +45,75 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPriceCheck, setShowPriceCheck] = useState(false);
+  const [showSyncConfig, setShowSyncConfig] = useState(false);
+  const [syncConfig, setSyncConfig] = useState<SyncConfigForm>(emptySyncConfig);
+  const [syncConfigLoading, setSyncConfigLoading] = useState(false);
+  const [syncConfigMessage, setSyncConfigMessage] = useState('');
   const navigate = useNavigate();
+
+  const openSyncConfig = async () => {
+    setShowSyncConfig(true);
+    setSyncConfigMessage('');
+    setSyncConfigLoading(true);
+
+    try {
+      const config = await window.electron.sync.getConfig();
+      setSyncConfig({
+        empresaId: config?.empresaId ? String(config.empresaId) : '',
+        empresaNome: config?.empresaNome || '',
+        empresaCnpj: config?.empresaCnpj || '',
+        pdvId: config?.pdvId || '',
+        tokenAutenticacao: config?.tokenAutenticacao || '',
+        urlBackend: config?.urlBackend || 'http://localhost:3000',
+      });
+    } catch (err) {
+      console.error('Erro ao carregar configuracao de sincronizacao:', err);
+      setSyncConfigMessage('Erro ao carregar a configuracao atual.');
+    } finally {
+      setSyncConfigLoading(false);
+    }
+  };
+
+  const handleSyncConfigChange = (field: keyof SyncConfigForm, value: string) => {
+    setSyncConfig((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveSyncConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSyncConfigMessage('');
+    setSyncConfigLoading(true);
+
+    try {
+      const empresaId = Number(syncConfig.empresaId || 0) || getEmpresaIdFromToken(syncConfig.tokenAutenticacao);
+      if (!Number.isInteger(empresaId) || empresaId <= 0) {
+        throw new Error('Token de acesso invalido. Gere o token no ERP e cole aqui.');
+      }
+
+      const success = await window.electron.sync.saveTenantConfig({
+        empresaId,
+        empresaNome: syncConfig.empresaNome.trim() || 'Empresa vinculada',
+        empresaCnpj: syncConfig.empresaCnpj.trim(),
+        pdvId: syncConfig.pdvId.trim(),
+        tokenAutenticacao: syncConfig.tokenAutenticacao.trim(),
+        urlBackend: syncConfig.urlBackend.trim() || 'http://localhost:3000',
+      });
+
+      if (!success) {
+        throw new Error('Nao foi possivel salvar a configuracao.');
+      }
+
+      const catalogLoaded = await window.electron.sync.loadCatalog();
+      await connectToServer();
+
+      setSyncConfigMessage(catalogLoaded
+        ? 'Configuracao salva e usuarios sincronizados. Tente entrar novamente.'
+        : 'Configuracao salva, mas nao foi possivel baixar usuarios agora. Clique em Sincronizar.');
+    } catch (err: any) {
+      setSyncConfigMessage(err.message || 'Erro ao salvar a configuracao.');
+    } finally {
+      setSyncConfigLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent | null, isZReport = false) => {
     if (e) e.preventDefault();
@@ -71,9 +174,12 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
+      const catalogLoaded = await window.electron.sync.loadCatalog();
       const result = await window.electron.sync.syncNow();
+      await connectToServer();
+
       if (result && result.success) {
-        alert('Sincronização concluída com sucesso!');
+        alert(catalogLoaded ? 'Sincronizacao concluida com sucesso!' : 'Vendas sincronizadas. Nao foi possivel baixar usuarios/produtos agora.');
       } else {
         setError('Erro na sincronização: ' + (result?.error || 'Desconhecido'));
       }
@@ -114,6 +220,16 @@ export default function Login() {
     <div className="login-container">
       <ConnectionStatus />
       <div className="login-box">
+        <button
+          type="button"
+          className="login-settings-button"
+          onClick={openSyncConfig}
+          aria-label="Configurar sincronizacao"
+          title="Configurar sincronizacao"
+          disabled={loading}
+        >
+          <Settings size={18} />
+        </button>
         <h1>PDV Offline</h1>
         <p className="subtitle">Sistema de Ponto de Venda</p>
 
@@ -184,6 +300,80 @@ export default function Login() {
         <ModalConsultarPreco
           onClose={() => setShowPriceCheck(false)}
         />
+      )}
+
+      {showSyncConfig && (
+        <div className="modal-overlay">
+          <div className="modal-content sync-config-modal">
+            <button
+              type="button"
+              className="modal-close-button"
+              onClick={() => setShowSyncConfig(false)}
+              aria-label="Fechar configuracao"
+            >
+              <X size={18} />
+            </button>
+
+            <h2>Sincronizacao</h2>
+            <p className="sync-config-subtitle">Empresa vinculada a este PDV</p>
+
+            <form onSubmit={handleSaveSyncConfig}>
+              <div className="form-group">
+                <label>CNPJ</label>
+                <input
+                  type="text"
+                  value={syncConfig.empresaCnpj}
+                  onChange={(e) => handleSyncConfigChange('empresaCnpj', e.target.value)}
+                  placeholder="Digite o CNPJ da empresa"
+                  required
+                  disabled={syncConfigLoading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>ID do PDV</label>
+                <input
+                  type="text"
+                  value={syncConfig.pdvId}
+                  onChange={(e) => handleSyncConfigChange('pdvId', e.target.value)}
+                  required
+                  disabled={syncConfigLoading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Token de autenticacao</label>
+                <input
+                  type="password"
+                  value={syncConfig.tokenAutenticacao}
+                  onChange={(e) => handleSyncConfigChange('tokenAutenticacao', e.target.value)}
+                  required
+                  disabled={syncConfigLoading}
+                />
+              </div>
+
+              {syncConfigMessage && (
+                <div className="sync-config-message">
+                  {syncConfigMessage}
+                </div>
+              )}
+
+              <div className="sync-config-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowSyncConfig(false)}
+                  disabled={syncConfigLoading}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={syncConfigLoading}>
+                  {syncConfigLoading ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

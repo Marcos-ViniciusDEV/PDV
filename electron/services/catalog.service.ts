@@ -9,6 +9,12 @@ import * as configService from "./config.service";
  */
 
 interface CatalogData {
+  empresa?: {
+    id: number;
+    cnpj?: string | null;
+    razaoSocial?: string | null;
+    nomeFantasia?: string | null;
+  } | null;
   produtos: Array<{
     id: number;
     codigo: string;
@@ -49,6 +55,9 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
   console.log("[Catalog Service] Loading catalog...");
   console.log(`[Catalog Service] ${data.produtos?.length || 0} products, ${data.usuarios?.length || 0} users`);
   
+  // A carga e completa: itens ausentes nao devem continuar disponiveis no caixa.
+  await productsRepository.deactivateAllProducts();
+
   // Atualizar produtos
   if (data.produtos && data.produtos.length > 0) {
     const products = data.produtos.map((p) => ({
@@ -87,6 +96,18 @@ export async function loadCatalog(data: CatalogData): Promise<void> {
     }));
     
     await usersRepository.upsertUsers(users);
+  }
+
+  if (data.empresa) {
+    const currentConfig = await configService.getConfig();
+    if (currentConfig) {
+      await configService.saveConfig({
+        ...currentConfig,
+        empresaId: data.empresa.id,
+        empresaNome: data.empresa.nomeFantasia || data.empresa.razaoSocial || currentConfig.empresaNome,
+        empresaCnpj: data.empresa.cnpj || currentConfig.empresaCnpj,
+      });
+    }
   }
 
   if (data.configuracaoFiscal) {

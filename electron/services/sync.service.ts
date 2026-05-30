@@ -2,6 +2,7 @@ import * as apiClient from "../http/api-client";
 import * as catalogService from "./catalog.service";
 import * as salesService from "./sales.service";
 import * as cashService from "./cash.service";
+import * as configService from "./config.service";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -16,7 +17,7 @@ let isOnline = false;
 let syncInterval: NodeJS.Timeout | null = null;
 let checkInterval: NodeJS.Timeout | null = null;
 
-const PDV_ID = process.env.VITE_PDV_ID || "PDV001";
+let currentPdvId = "";
 const SYNC_INTERVAL_MS = 30 * 1000; // 30 segundos
 const CHECK_INTERVAL_MS = 30 * 1000; // 30 segundos
 
@@ -25,7 +26,8 @@ const CHECK_INTERVAL_MS = 30 * 1000; // 30 segundos
  */
 export async function startSyncService() {
   console.log("[Sync Service] Starting...");
-  console.log("[Sync Service] PDV ID:", PDV_ID);
+  currentPdvId = (await configService.getConfig())?.pdvId || "";
+  console.log("[Sync Service] PDV ID:", currentPdvId || "nao configurado");
   
   // Carregar catálogo inicial
   await loadCatalog();
@@ -200,7 +202,7 @@ export async function forceSyncNow() {
 export function getStatus() {
   return {
     isOnline,
-    pdvId: PDV_ID,
+    pdvId: currentPdvId,
     lastCheck: new Date().toISOString(),
   };
 }

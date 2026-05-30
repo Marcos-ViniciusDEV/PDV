@@ -53,6 +53,7 @@ export async function upsertUsers(userList: InsertUser[]): Promise<void> {
   
   for (const user of userList) {
     const existing = await getUserById(user.id!);
+    const existingByEmail = await getUserByEmail(user.email);
     
     if (existing) {
       // Atualizar apenas nome, email e role - NUNCA a senha
@@ -67,6 +68,11 @@ export async function upsertUsers(userList: InsertUser[]): Promise<void> {
         })
         .where(eq(users.id, user.id!));
     } else {
+      if (existingByEmail) {
+        // O ERP e a fonte oficial. Remove cadastro local antigo com o mesmo
+        // email antes de inserir o ID atual recebido na carga.
+        await db.delete(users).where(eq(users.email, user.email));
+      }
       await db.insert(users).values(user);
     }
   }

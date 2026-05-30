@@ -103,6 +103,15 @@ export async function upsertProducts(productList: InsertProduct[]): Promise<void
 }
 
 /**
+ * Antes de aplicar uma carga completa, desativa itens locais antigos.
+ * Os produtos presentes na carga voltam a ficar ativos durante o upsert.
+ */
+export async function deactivateAllProducts(): Promise<void> {
+  const db = await getDb();
+  await db.update(products).set({ ativo: 0 });
+}
+
+/**
  * Limpa todos os produtos (usado antes de sincronização completa)
  */
 export async function clearAllProducts(): Promise<void> {

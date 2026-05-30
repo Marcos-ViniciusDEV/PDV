@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import * as cashService from "../services/cash.service";
 import * as printerService from "../services/printer.service";
+import * as configService from "../services/config.service";
 
 /**
  * Controller de Caixa
@@ -15,7 +16,7 @@ export function registerCaixaHandlers() {
       
       // Imprimir comprovante
       const receiptHtml = printerService.generateOpeningReceipt({
-        pdvId: "PDV-01", // TODO: Pegar do config
+        pdvId: await getConfiguredPdvId(),
         operatorName,
         openedAt: session.openedAt,
         initialAmount,
@@ -37,7 +38,7 @@ export function registerCaixaHandlers() {
       
       // Gerar Relatório Z
       const zReportHtml = printerService.generateZReport({
-        pdvId: "PDV-01",
+        pdvId: await getConfiguredPdvId(),
         operatorName: result.session.operatorName,
         openedAt: result.session.openedAt,
         closedAt: result.session.closedAt!,
@@ -76,7 +77,7 @@ export function registerCaixaHandlers() {
       
       // Imprimir comprovante
       const receiptHtml = printerService.generateMovementReceipt({
-        pdvId: "PDV-01",
+        pdvId: await getConfiguredPdvId(),
         type: "SANGRIA",
         amount,
         reason,
@@ -106,7 +107,7 @@ export function registerCaixaHandlers() {
       
       // Imprimir comprovante
       const receiptHtml = printerService.generateMovementReceipt({
-        pdvId: "PDV-01",
+        pdvId: await getConfiguredPdvId(),
         type: "SUPRIMENTO",
         amount,
         reason,
@@ -152,7 +153,7 @@ export function registerCaixaHandlers() {
       const totals = await cashService.getDailyTotals(today);
       
       const zReportHtml = printerService.generateZReport({
-        pdvId: "PDV-01",
+        pdvId: await getConfiguredPdvId(),
         operatorName: "TODOS",
         openedAt: totals.date,
         closedAt: new Date(),
@@ -176,4 +177,9 @@ export function registerCaixaHandlers() {
       return { success: false, error: error.message };
     }
   });
+}
+
+async function getConfiguredPdvId() {
+  const config = await configService.getConfig();
+  return config?.pdvId || "PDV nao configurado";
 }

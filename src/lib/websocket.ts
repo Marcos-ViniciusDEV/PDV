@@ -1,31 +1,76 @@
-// WebSocket client para conectar ao servidor
+// WebSocket client para conectar ao servidor somente apos configurar o PDV.
 let ws: WebSocket | null = null;
-let reconnectInterval: NodeJS.Timeout | null = null;
-const PDV_ID = 'PDV001'; // Hardcoded for now
-const PDV_NAME = 'PDV Principal';
-const PDV_LOCATION = 'Loja Principal';
+let reconnectInterval: ReturnType<typeof setInterval> | null = null;
+let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
-export function connectToServer() {
-  const wsUrl = `ws://localhost:3000/pdv-ws`;
-  
+type PdvConnectionConfig = {
+  pdvId: string;
+  empresaNome?: string | null;
+  empresaCnpj?: string | null;
+  tokenAutenticacao: string;
+  urlBackend?: string | null;
+};
+
+async function getPdvConnectionConfig(): Promise<PdvConnectionConfig | null> {
+  try {
+    const config = await window.electron.sync.getConfig();
+    if (!config?.pdvId || !config?.tokenAutenticacao) {
+      return null;
+    }
+
+    return {
+      pdvId: String(config.pdvId),
+      empresaNome: config.empresaNome,
+      empresaCnpj: config.empresaCnpj,
+      tokenAutenticacao: config.tokenAutenticacao,
+      urlBackend: config.urlBackend,
+    };
+  } catch (error) {
+    console.warn('PDV ainda nao configurado para WebSocket:', error);
+    return null;
+  }
+}
+
+function buildWsUrl(urlBackend?: string | null) {
+  const baseUrl = urlBackend || 'http://localhost:3000';
+  const url = new URL(baseUrl);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  url.pathname = '/pdv-ws';
+  url.search = '';
+  return url.toString();
+}
+
+export async function connectToServer() {
+  const config = await getPdvConnectionConfig();
+  if (!config) {
+    console.log('PDV sem configuracao local. WebSocket nao sera conectado.');
+    scheduleReconnect();
+    return;
+  }
+
+  await sendHttpHeartbeat(config);
+  startHeartbeat(config.pdvId);
+
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  const wsUrl = buildWsUrl(config.urlBackend);
+
   console.log('Connecting to WebSocket server...');
   ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
-    console.log('✅ Connected to server');
-    
-    // Register PDV
+    console.log('Connected to server');
+
     ws?.send(JSON.stringify({
       type: 'register',
-      pdvId: PDV_ID,
-      name: PDV_NAME,
-      location: PDV_LOCATION,
+      pdvId: config.pdvId,
+      name: `PDV ${config.pdvId}`,
+      location: config.empresaNome || config.empresaCnpj || 'Empresa configurada',
+      token: config.tokenAutenticacao,
     }));
 
-    // Start heartbeat
-    startHeartbeat();
-
-    // Clear reconnect interval
     if (reconnectInterval) {
       clearInterval(reconnectInterval);
       reconnectInterval = null;
@@ -46,28 +91,64 @@ export function connectToServer() {
   };
 
   ws.onclose = () => {
-    console.log('❌ Disconnected from server');
+    console.log('Disconnected from server');
     ws = null;
 
-    // Try to reconnect every 5 seconds
-    if (!reconnectInterval) {
-      reconnectInterval = setInterval(() => {
-        console.log('Attempting to reconnect...');
-        connectToServer();
-      }, 5000);
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
     }
+
+    scheduleReconnect();
   };
 }
 
-function startHeartbeat() {
-  setInterval(() => {
+function scheduleReconnect() {
+  if (!reconnectInterval) {
+    reconnectInterval = setInterval(() => {
+      console.log('Attempting to connect WebSocket...');
+      connectToServer();
+    }, 5000);
+  }
+}
+
+async function sendHttpHeartbeat(config: PdvConnectionConfig) {
+  try {
+    const baseUrl = config.urlBackend || 'http://localhost:3000';
+    await fetch(`${baseUrl}/api/pdv/heartbeat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.tokenAutenticacao}`,
+      },
+      body: JSON.stringify({
+        pdvId: config.pdvId,
+        name: `PDV ${config.pdvId}`,
+        location: config.empresaNome || config.empresaCnpj || 'Empresa configurada',
+      }),
+    });
+  } catch (error) {
+    console.warn('Falha ao enviar heartbeat HTTP do PDV:', error);
+  }
+}
+
+function startHeartbeat(pdvId: string) {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+  }
+
+  heartbeatInterval = setInterval(() => {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
         type: 'heartbeat',
-        pdvId: PDV_ID,
+        pdvId,
       }));
     }
-  }, 30000); // Every 30 seconds
+
+    getPdvConnectionConfig().then((config) => {
+      if (config) sendHttpHeartbeat(config);
+    });
+  }, 30000);
 }
 
 function handleServerMessage(data: any) {
@@ -94,22 +175,20 @@ function handleServerMessage(data: any) {
 
 async function handleCatalogReceived(catalog: any) {
   try {
-    // Notify UI that update is starting
     window.dispatchEvent(new CustomEvent('catalog-update-start'));
 
-    // Load catalog into localStorage
     await window.electron.db.saveCatalog(catalog);
-    
-    // Log success
+
     console.log('Catalog loaded successfully', {
       produtos: catalog.produtos?.length || 0,
-      usuarios: catalog.usuarios?.length || 0
+      usuarios: catalog.usuarios?.length || 0,
     });
   } catch (error) {
     console.error('Failed to load catalog:', error);
-    alert('Erro ao carregar catálogo recebido do servidor');
+    alert('Erro ao carregar catalogo recebido do servidor');
   }
 }
 
-// Auto-connect on module load
-connectToServer();
+if (window.electron?.sync) {
+  connectToServer();
+}
